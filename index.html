@@ -1123,24 +1123,56 @@
     scr.appendChild(batt);
   }
 
+  var SVG_HEAD = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">');
+  function svgIcon(body) {
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' + body + '</svg>');
+  }
+  var DPAD = '<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill="#fff" fill-opacity=".3"/>';
+  // the glyphs the stock binary draws, approximated
+  var STOCK_GLYPH = {
+    ud: svgIcon(DPAD + '<path d="M9 2h6v9H9zM9 13h6v9H9z" fill="#fff"/>'),
+    lr: svgIcon(DPAD + '<path d="M2 9h9v6H2zM13 9h9v6h-9z" fill="#fff"/>'),
+    udlr: svgIcon('<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill="#fff"/>'),
+    start: svgIcon('<rect x="2" y="8" width="20" height="8" rx="4" fill="#fff"/>'),
+    select: svgIcon('<rect x="3" y="9" width="18" height="6" rx="3" fill="none" stroke="#fff" stroke-width="2"/>')
+  };
+  var CHIP_ALIAS = { "\u2195": "ud", "\u2194": "lr", "\u2299": "start" };
+
+  // stock sizes a help icon from the font: round(letterHeight * 1.25),
+  // letterHeight being the pixel height of the 'S' glyph (Font.cpp:554)
+  function stockIconH() {
+    var c = stockIconH.c || (stockIconH.c = document.createElement("canvas").getContext("2d"));
+    c.font = fontCss(S.helpFont, S.fHelp).replace(/\/\S+/, " ");
+    var m = c.measureText("S");
+    var h = (m.actualBoundingBoxAscent || S.helpFont * 0.72) + (m.actualBoundingBoxDescent || 0);
+    return Math.round(h * 1.25);
+  }
+
   function chip(letter, label) {
+    var key = CHIP_ALIAS[letter] || letter;
+    var stock = S.engine === "stock";
+    var size = stock ? stockIconH() : S.helpIcon;
+    // stock's icon-to-label gap is a fixed 8px (HelpComponent.cpp:15)
     var wrap = el("div", { position: "relative", display: "flex", alignItems: "center", gap: "8px" });
-    var art = ART["btn" + letter];
+    var art = ART["btn" + key];
+    if (!art && STOCK_GLYPH[key]) art = { src: STOCK_GLYPH[key] };
     var circle;
     if (art) {
-      circle = tinted({ position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px" },
+      circle = tinted({ position: "relative", width: size + "px", height: size + "px" },
         art.src, css("helpChip"));
     } else {
       circle = el("div", {
-        position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px", borderRadius: "50%",
+        position: "relative", width: size + "px", height: size + "px", borderRadius: "50%",
         background: css("helpChip"), color: css("helpPill"), display: "flex", alignItems: "center",
-        justifyContent: "center", font: fontCss(Math.round(S.helpIcon * 0.62), S.fHelp)
-      }, letter);
+        justifyContent: "center", font: fontCss(Math.round(size * 0.62), S.fHelp)
+      }, key.toUpperCase());
     }
     var txt = el("div", {
       position: "relative", font: fontCss(S.helpFont, S.fHelp),
       color: css("helpText"), whiteSpace: "nowrap"
-    }, upper(label, S.uHelp));
+    }, upper(label, S.engine === "stock" ? true : S.uHelp));
     wrap.appendChild(circle); wrap.appendChild(txt);
     return wrap;
   }
@@ -1151,10 +1183,10 @@
     if (S.stockPrompts) {
       // one row, as the stock views emit them — a theme cannot drop any
       groups = page === "carousel"
-        ? [[["↕", "Choose"], ["A", "Select"], ["X", "Random"], ["Y", "Search"], ["\u2299", "Clock"]]]
+        ? [[["ud", "Choose"], ["a", "Select"], ["x", "Random"], ["y", "Search"], ["select", "Clock"]]]
         : page === "gamelist"
-          ? [[["↔", "System"], ["↕", "Choose"], ["A", "Launch"], ["B", "Back"], ["X", "Random"], ["\u2299", "Options"]]]
-          : [[["↕", "Choose"], ["A", "Select"], ["B", "Back"]]];
+          ? [[["lr", "System"], ["ud", "Choose"], ["a", "Launch"], ["b", "Back"], ["x", "Random"], ["start", "Options"]]]
+          : [[["ud", "Choose"], ["a", "Select"], ["b", "Back"]]];
     } else {
       groups = page === "carousel"
         ? [[["X", "Random"], ["Y", "Search"]], [["A", "Open"]]]
@@ -1162,7 +1194,7 @@
           ? [[["X", "Random"], ["Y", "Favorite"]], [["B", "Back"], ["A", "Launch"]]]
           : [[["B", "Back"]], [["A", "Select"]]];
     }
-    var pillH = S.helpIcon + S.helpPadY * 2;
+    var pillH = (S.engine === "stock" ? stockIconH() : S.helpIcon) + (S.engine === "stock" ? 0 : S.helpPadY * 2);
     var top = SH - 8 - pillH;
 
     groups.forEach(function (g, gi) {
@@ -1175,24 +1207,11 @@
       });
       g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
       if (S.stockPrompts) {
+        // stock lays the row out left to right from its themed position with a
+        // fixed 16px between entries, and simply runs off the edge if it is
+        // too wide (HelpComponent.cpp:16, 89) - no spreading, no scaling
         box.style.left = S.helpMargin + "px";
-        box.style.width = (SW - S.helpMargin * 2) + "px";
-        box.style.gap = "10px";
-        box.style.justifyContent = "space-between";
-        box.style.overflow = "hidden";
-        // a long stock prompt row is scaled down to fit rather than clipped
-        requestAnimationFrame(function () {
-          var need = 0;
-          [].slice.call(box.children).forEach(function (c) { need += c.getBoundingClientRect().width; });
-          var zoom = parseFloat(document.getElementById("console").style.transform.replace(/.*scale\(([^)]+)\).*/, "$1")) || 1;
-          need = need / zoom + 10 * (box.children.length - 1);
-          var avail = SW - S.helpMargin * 2;
-          if (need > avail) {
-            box.style.transform = "scale(" + (avail / need) + ")";
-            box.style.transformOrigin = "left center";
-            box.style.width = need + "px";
-          }
-        });
+        box.style.gap = "16px";
       } else if (gi === 0) box.style.left = (S.helpMargin - S.helpPadX) + "px";
       else box.style.right = (S.helpMargin - S.helpPadX) + "px";
       scr.appendChild(box);
@@ -1758,12 +1777,13 @@
       x.push('    <view name="' + view + '">');
       x.push('        <helpsystem name="help">');
       x.push('\t<fontPath>./fonts/' + S.fHelp + '</fontPath>');
-      x.push('\t<visible>' + (S.helpShow ? 'true' : 'false') + '</visible>');
+      if (S.engine === "custom") x.push('\t<visible>' + (S.helpShow ? 'true' : 'false') + '</visible>');
       x.push('\t<pos>' + f(S.helpMargin / SW, 6) + ' ' + f((SH - 8 - (S.helpIcon + S.helpPadY * 2) + S.helpPadY) / SH, 6) + '</pos>');
       x.push('\t<origin>0 0</origin>');
       x.push('\t<fontSize>' + fontFrac(S.helpFont) + '</fontSize><!-- ' + S.helpFont + 'px -->');
       x.push('\t<textColor>' + hex8("helpText") + '</textColor>');
       x.push('\t<iconColor>' + hex8("helpChip") + '</iconColor>');
+      if (S.engine === "custom") {
       x.push('\t<iconSize>' + f(S.helpIcon / SH, 6) + '</iconSize><!-- ' + S.helpIcon + 'px -->');
       x.push('\t<iconTextSpacing>0.0125</iconTextSpacing>');
       x.push('\t<entrySpacing>0.034375</entrySpacing>');
@@ -1772,6 +1792,9 @@
       x.push('\t<backgroundWidth>0</backgroundWidth><!-- content-fit pills -->');
       x.push('\t<backgroundRadius>' + f((S.helpIcon + S.helpPadY * 2) / 2 / SH, 6) + '</backgroundRadius>');
       x.push('\t<backgroundPadding>' + f(S.helpPadX / SW, 6) + ' ' + f(S.helpPadY / SH, 6) + '</backgroundPadding>');
+      } else {
+      x.push('\t<!-- stock sizes icons from the font and fixes the spacing; only the paths below are themeable -->');
+      }
       x.push('\t<iconX>' + PATHS.btnX + '</iconX>');
       x.push('\t<iconY>' + PATHS.btnY + '</iconY>');
       x.push('\t<iconA>' + PATHS.btnA + '</iconA>');
@@ -2001,14 +2024,17 @@
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
       { k: "stockPrompts", t: "bool", label: "Stock button set", hint: "Stock EmulationStation decides which buttons appear — a theme cannot hide them. This build trims them instead." },
+      { t: "note", label: "Stock draws its own button glyphs at a size it derives from the hint font, 8px from the label and 16px apart. A theme may point those slots at its own images, but not resize, respace, relabel or hide them." },
       { k: "helpPillOn", t: "bool", label: "Pill behind the hints", hint: "Stock EmulationStation draws the hints with no pill; the pill is this build's addition." },
       { k: "helpFont", t: "num", label: "Label size", min: 12, max: 30, step: 1, unit: "px" },
-      { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px" },
-      { k: "helpPadX", t: "num", label: "Pill padding X", min: 0, max: 30, step: 1, unit: "px" },
-      { k: "helpPadY", t: "num", label: "Pill padding Y", min: 0, max: 20, step: 1, unit: "px" },
+      { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px", customOnly: true,
+        hint: "Stock sizes each icon from the hint font instead (the 'S' height x 1.25) and ignores this." },
+      { k: "helpPadX", t: "num", label: "Pill padding X", min: 0, max: 30, step: 1, unit: "px", customOnly: true },
+      { k: "helpPadY", t: "num", label: "Pill padding Y", min: 0, max: 20, step: 1, unit: "px", customOnly: true },
       { k: "helpMargin", t: "num", label: "Side margin", min: 0, max: 60, step: 1, unit: "px" },
       { k: "fHelp", t: "font", label: "Label font" },
-      { k: "uHelp", t: "bool", label: "Uppercase labels" }
+      { k: "uHelp", t: "bool", label: "Uppercase labels", customOnly: true,
+        hint: "Stock always uppercases them." }
     ].concat(artFields(["btnX", "btnY", "btnA", "btnB"])) }
   ];
 
@@ -2131,6 +2157,13 @@
 
   function buildField(fd) {
     var wrap = el("div"); wrap.className = "field" + (fd.t === "num" || fd.t === "art" ? " slider" : "");
+    // a property only this build reads is inert while previewing stock
+    if (fd.customOnly && S.engine === "stock") {
+      wrap.style.opacity = ".45";
+      wrap.style.pointerEvents = "none";
+      wrap.setAttribute("aria-disabled", "true");
+      fd = Object.assign({}, fd, { hint: fd.hint || "Stock EmulationStation ignores this." });
+    }
     if (fd.t === "note") {
       var n = el("div", null, fd.label); n.className = "hint"; n.style.marginTop = "2px";
       wrap.appendChild(n);

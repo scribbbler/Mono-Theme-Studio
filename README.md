@@ -58,9 +58,16 @@ The five **Mono** themes load as presets, so you can start from one and adjust.
 
 A switch in the header decides which engine the preview and the export target.
 **Stock ES** dims unselected entries, enlarges the selected one by `logoScale`,
-draws the help prompts the views emit (a theme cannot drop any) with no pill,
 leaves the battery in the UI font, and writes a `theme.xml` with none of this
-build's own properties. **This build** turns on the additions: selection pills,
+build's own properties. Its button-hint bar follows stock's rules exactly: the
+views decide which prompts appear and a theme cannot drop any, the labels are
+always uppercased, and each icon is drawn at a size stock derives from the hint
+font — 8px from its label, 16px from the next prompt, with no background. A
+theme *can* point the icon slots at its own images (stock reads `iconA`,
+`iconB`, `iconX`, `iconY`, `iconL`, `iconR`, `iconStart`, `iconSelect` and the
+three d-pad paths); load art for one and the preview uses it, otherwise it draws
+the glyph the stock binary ships. Size, spacing, labels and a pill behind them
+are this build's additions, so those controls grey out. **This build** turns on the additions: selection pills,
 gradients, fit-content pills, list navigation, keyboard styling and the
 screensaver clock. Importing a theme picks the right side for you.
 
