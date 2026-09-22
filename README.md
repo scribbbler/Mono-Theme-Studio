@@ -54,7 +54,23 @@ The five **Mono** themes load as presets, so you can start from one and adjust.
 
 ![The general settings panel](docs/screenshot-general.png)
 
+## Opening an existing theme
+
+**Import .zip** or **Import folder** reads a theme you already have: its colours,
+fonts, sizes and pill geometry fill in the controls, its own font files register
+for the preview, and its background art shows behind the mock-up. Zips are read
+in the browser with no library — the central directory is walked by hand and
+entries inflated with `DecompressionStream`.
+
 ## Using what it produces
+
+**Download .zip** gives you a whole theme folder: the edited `theme.xml` plus
+every font and image in use, and — if you imported a theme — everything else
+from the original carried across untouched. Unzip into `/roms/themes/`.
+Note the `theme.xml` is rewritten from the properties this tool manages, so
+anything exotic in an imported file is not preserved.
+
+## Using what it produces (by hand)
 
 1. Copy an existing theme folder (for example `Mono Dark`) to a new name.
 2. Replace its `theme.xml` with the one this tool gives you.

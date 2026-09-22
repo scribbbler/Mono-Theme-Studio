@@ -247,6 +247,7 @@
     <span>R36S · 640×480 · live theme.xml</span>
   </div>
   <div class="presets" id="presets"></div>
+  <div class="presets" id="io"></div>
 </header>
 
 <main>
@@ -314,15 +315,23 @@
         <h2>theme.xml</h2>
         <div class="actions">
           <button class="btn" id="copy">Copy</button>
-          <button class="btn primary" id="download">Download</button>
+          <button class="btn" id="download">theme.xml</button>
+          <button class="btn primary" id="zip">Download .zip</button>
         </div>
       </div>
       <pre class="xml" id="xml"></pre>
       <p class="note">
-        Copy a Mono theme folder, drop this <code>theme.xml</code> in, and pick it on the device.
-        Sizes here are the pixels you see on a 640×480 panel; the file stores them as screen
-        fractions, with font sizes divided by the engine's 1.31 boost.
-        Menu row spacing and the button-hint labels come from the build, not the theme.
+        <b>Download .zip</b> gives you a complete theme folder — this
+        <code>theme.xml</code> plus every font and image in use. Unzip it into
+        <code>/roms/themes/</code> and pick it in <i>UI Settings → Theme</i>.
+        <b>Import</b> opens an existing theme (zip or folder): its colours, fonts and
+        geometry fill in these controls, its own fonts and art load into the preview,
+        and files the tool doesn't touch are carried through to the zip unchanged —
+        though the <code>theme.xml</code> itself is rewritten from the properties here,
+        so anything exotic in the original is not preserved.
+        Sizes are the pixels you see on a 640×480 panel; the file stores screen
+        fractions, with font sizes divided by the engine's 1.31 boost. Menu row
+        spacing and the hint labels come from the build, not the theme.
       </p>
     </div>
   </section>
@@ -468,6 +477,265 @@
   }
   var canvas = document.createElement("canvas");
   var ctx = canvas.getContext("2d");
+
+
+  // ---------- opening an existing theme ----------
+  // Zip reading without a library: walk the central directory and inflate
+  // each entry with DecompressionStream (Safari 16.4+, Chrome 80+).
+  function readZip(buf) {
+    var dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength), eocd = -1;
+    for (var i = buf.length - 22; i >= 0 && i > buf.length - 66000; i--) {
+      if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("This file is not a zip archive.");
+    var count = dv.getUint16(eocd + 10, true), p = dv.getUint32(eocd + 16, true), out = {};
+    for (var n = 0; n < count; n++) {
+      var method = dv.getUint16(p + 10, true);
+      var csize = dv.getUint32(p + 20, true);
+      var nameLen = dv.getUint16(p + 28, true);
+      var extraLen = dv.getUint16(p + 30, true);
+      var cmtLen = dv.getUint16(p + 32, true);
+      var lho = dv.getUint32(p + 42, true);
+      var name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nameLen));
+      var lnLen = dv.getUint16(lho + 26, true), leLen = dv.getUint16(lho + 28, true);
+      var start = lho + 30 + lnLen + leLen;
+      out[name] = { method: method, data: buf.subarray(start, start + csize) };
+      p += 46 + nameLen + extraLen + cmtLen;
+    }
+    return out;
+  }
+  function inflateEntry(e) {
+    if (e.method === 0) return Promise.resolve(e.data);
+    if (!window.DecompressionStream) return Promise.reject(new Error("This browser cannot unzip; open the extracted folder instead."));
+    var stream = new Blob([e.data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Response(stream).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+
+  function bytesToDataURL(bytes, mime) {
+    var bin = "", chunk = 0x8000;
+    for (var i = 0; i < bytes.length; i += chunk)
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    return "data:" + mime + ";base64," + btoa(bin);
+  }
+  function mimeOf(path) {
+    var e = path.toLowerCase().split(".").pop();
+    return e === "png" ? "image/png" : e === "jpg" || e === "jpeg" ? "image/jpeg"
+      : e === "svg" ? "image/svg+xml" : e === "otf" ? "font/otf" : e === "ttf" ? "font/ttf" : "application/octet-stream";
+  }
+
+  // theme.xml lookups: view names can be comma lists ("basic, detailed, video")
+  function makeReader(doc, baseDir) {
+    function views(token) {
+      return [].slice.call(doc.querySelectorAll("view")).filter(function (v) {
+        return (v.getAttribute("name") || "").split(",").map(function (t) { return t.trim(); }).indexOf(token) >= 0;
+      });
+    }
+    function el(token, tag, name) {
+      var vs = views(token);
+      for (var i = 0; i < vs.length; i++) {
+        var list = vs[i].getElementsByTagName(tag);
+        for (var j = 0; j < list.length; j++)
+          if (!name || list[j].getAttribute("name") === name) return list[j];
+      }
+      return null;
+    }
+    function prop(token, tag, name, p) {
+      var e = el(token, tag, name);
+      if (!e) return null;
+      var c = e.getElementsByTagName(p);
+      return c.length ? c[0].textContent.trim() : null;
+    }
+    return {
+      el: el, prop: prop, baseDir: baseDir,
+      num: function (token, tag, name, p) { var v = prop(token, tag, name, p); return v == null ? null : parseFloat(v); },
+      pair: function (token, tag, name, p) {
+        var v = prop(token, tag, name, p);
+        if (!v) return null;
+        var a = v.split(/\s+/).map(parseFloat);
+        return a.length >= 2 ? a : null;
+      },
+      colour: function (token, tag, name, p) {
+        var v = prop(token, tag, name, p);
+        if (!v) return null;
+        v = v.replace("#", "");
+        if (v.length !== 6 && v.length !== 8) return null;
+        return { hex: "#" + v.slice(0, 6).toUpperCase(), a: v.length === 8 ? Math.round(parseInt(v.slice(6), 16) / 255 * 100) : 100 };
+      }
+    };
+  }
+
+
+  var imported = null;   // { name, files, doc }
+
+  function resolve(files, baseDir, ref) {
+    if (!ref) return null;
+    var want = ref.replace(/^\.\//, "").replace(/^\//, "").toLowerCase();
+    var cand = (baseDir ? baseDir + "/" : "") + want;
+    var keys = Object.keys(files);
+    for (var i = 0; i < keys.length; i++) if (keys[i].toLowerCase() === cand) return keys[i];
+    for (var j = 0; j < keys.length; j++) if (keys[j].toLowerCase().endsWith("/" + want) || keys[j].toLowerCase() === want) return keys[j];
+    return null;
+  }
+
+  function applyTheme(files, xmlPath, xmlText) {
+    var doc = new DOMParser().parseFromString(xmlText, "application/xml");
+    if (doc.getElementsByTagName("parsererror").length) throw new Error("theme.xml could not be parsed.");
+    var baseDir = xmlPath.indexOf("/") >= 0 ? xmlPath.slice(0, xmlPath.lastIndexOf("/")) : "";
+    var r = makeReader(doc, baseDir);
+    var jobs = [];
+
+    function useFont(ref, key) {
+      var path = resolve(files, baseDir, ref);
+      if (!path) return;
+      var id = path.split("/").pop();
+      var known = FONT_LIB.filter(function (e) { return e.id === id; })[0];
+      if (known) { S[key] = id; return; }
+      jobs.push(Promise.resolve(files[path]()).then(function (bytes) {
+        var entry = { id: id, label: id.replace(/\.(ttf|otf)$/i, ""), src: bytesToDataURL(bytes, mimeOf(id)), fam: "F_i" + (++fontSeq) };
+        FONT_LIB.push(entry);
+        S[key] = id;
+        return registerFont(entry);
+      }));
+    }
+    function useArt(ref, slot) {
+      var path = resolve(files, baseDir, ref);
+      if (!path) return;
+      jobs.push(Promise.resolve(files[path]()).then(function (bytes) {
+        ART[slot] = { src: bytesToDataURL(bytes, mimeOf(path)), name: path.split("/").pop() };
+        if (PATHS[slot] !== undefined) PATHS[slot] = ref;
+      }));
+    }
+    function col(v, key) { if (v) { S[key] = v.hex; S[key + "A"] = v.a; } }
+    function px(v, axis, key) { if (v != null) S[key] = Math.round(v * (axis === "x" ? SW : SH)); }
+
+    // ---- palette ----
+    col(r.colour("system", "carousel", null, "selectorColor"), "pill");
+    var cEnd = r.colour("system", "carousel", null, "selectorColorEnd");
+    if (cEnd) { S.pillGrad = true; S.pillEnd = cEnd.hex; S.pillEndA = cEnd.a; } else S.pillGrad = false;
+    col(r.colour("system", "carousel", null, "logoColor"), "text");
+    col(r.colour("system", "carousel", null, "logoSelectedColor"), "pillText");
+    col(r.colour("system", "helpsystem", null, "backgroundColor"), "helpPill");
+    col(r.colour("system", "helpsystem", null, "textColor"), "helpText");
+    col(r.colour("system", "helpsystem", null, "iconColor"), "helpChip");
+    col(r.colour("screen", "keyboard", null, "keyColor"), "kbKey");
+    var kp = r.colour("screen", "keyboard", null, "keyPressColor");
+    if (kp) { S.kbPress = kp.hex; S.kbPressA = kp.a; }
+
+    // ---- carousel ----
+    var pos = r.pair("system", "carousel", null, "pos"), size = r.pair("system", "carousel", null, "size");
+    if (pos) S.carTop = Math.round(pos[1] * SH);
+    if (size) S.carHeight = Math.round(size[1] * SH);
+    var logoSize = r.pair("system", "carousel", null, "logoSize");
+    if (logoSize) { S.carRowH = Math.round(logoSize[1] * SH); S.carIndent = Math.round(logoSize[0] * SW / 10); S.carLogoW = Math.round(logoSize[0] * SW); S.carLogoH = Math.round(logoSize[1] * SH); }
+    px(r.num("system", "carousel", null, "selectorHeight"), "y", "carPillH");
+    px(r.num("system", "carousel", null, "selectorRadius"), "y", "carRadius");
+    px(r.num("system", "carousel", null, "selectorWidth"), "x", "carPillW");
+    px(r.num("system", "carousel", null, "selectorPadding"), "y", "carPad");
+    var mlc = r.num("system", "carousel", null, "maxLogoCount"); if (mlc) S.carRows = Math.round(mlc);
+    S.carFit = (r.prop("system", "carousel", null, "selectorFitContent") || "") === "true";
+    S.listScroll = (r.prop("system", "carousel", null, "listScroll") || "") === "true";
+    S.carLogos = !!r.el("system", "image", "logo");
+    useArt(r.prop("system", "image", "logo", "path"), "sysLogo");
+    var lt = r.num("system", "text", "logoText", "fontSize");
+    if (lt) S.carFont = Math.round(lt * SH * BOOST);
+    S.uCar = (r.prop("system", "text", "logoText", "forceUppercase") || "") === "true";
+    useFont(r.prop("system", "text", "logoText", "fontPath"), "fCar");
+
+    // ---- gamelist ----
+    var gp = r.pair("basic", "textlist", "gamelist", "pos"), gs = r.pair("basic", "textlist", "gamelist", "size");
+    if (gp) { S.glLeft = Math.round(gp[0] * SW); S.glTop = Math.round(gp[1] * SH); }
+    if (gs) S.glWidth = Math.round(gs[0] * SW);
+    var gf = r.num("basic", "textlist", "gamelist", "fontSize");
+    if (gf) S.glFont = Math.round(gf * SH * BOOST);
+    px(r.num("basic", "textlist", "gamelist", "selectorHeight"), "y", "glPillH");
+    px(r.num("basic", "textlist", "gamelist", "selectorRadius"), "y", "glRadius");
+    px(r.num("basic", "textlist", "gamelist", "horizontalMargin"), "x", "glInset");
+    var ls = r.num("basic", "textlist", "gamelist", "lineSpacing");
+    if (ls) S.glPitch = Math.round(ls * glyphBox(S.glFont, S.fGl));
+    S.glFit = (r.prop("basic", "textlist", "gamelist", "selectorFitContent") || "") === "true";
+    useFont(r.prop("basic", "textlist", "gamelist", "fontPath"), "fGl");
+    var gh = r.num("basic", "text", "logoText", "fontSize");
+    if (gh) S.glHeader = Math.round(gh * SH * BOOST);
+    useFont(r.prop("basic", "text", "logoText", "fontPath"), "fGlHead");
+    S.glArt = !!r.el("basic", "image", "md_image");
+
+    // ---- status bar ----
+    var cp = r.pair("screen", "text", "clock", "pos");
+    if (cp) { S.clockX = Math.round(cp[0] * SW); S.clockY = Math.round(cp[1] * SH); }
+    var cf = r.num("screen", "text", "clock", "fontSize");
+    if (cf) S.clockSize = Math.round(cf * SH * BOOST);
+    useFont(r.prop("screen", "text", "clock", "fontPath"), "fClock");
+    var bs = r.pair("screen", "batteryIndicator", null, "size");
+    if (bs) S.battRight = Math.round(SW - bs[0] * SW);
+    var bp = r.pair("screen", "batteryIndicator", null, "pos");
+    if (bp) S.battY = Math.round(bp[1] * SH);
+    var bf = r.num("screen", "batteryIndicator", null, "fontSize");
+    if (bf) S.battSize = Math.round(bf * SH * BOOST);
+    px(r.num("screen", "batteryIndicator", null, "itemSpacing"), "x", "battGap");
+    useFont(r.prop("screen", "batteryIndicator", null, "fontPath"), "fBatt");
+    useArt(r.prop("screen", "batteryIndicator", null, "full"), "battery");
+    var barBg = r.colour("screen", "text", "clock", "backgroundColor");
+    if (barBg) { S.barBgOn = true; S.barBg = barBg.hex; S.barBgA = barBg.a;
+      var csz = r.pair("screen", "text", "clock", "size"); if (csz) S.barH = Math.round(csz[1] * SH); }
+    else S.barBgOn = false;
+
+    // ---- hint bar ----
+    var hf = r.num("system", "helpsystem", null, "fontSize");
+    if (hf) S.helpFont = Math.round(hf * SH * BOOST);
+    px(r.num("system", "helpsystem", null, "iconSize"), "y", "helpIcon");
+    var hpad = r.pair("system", "helpsystem", null, "backgroundPadding");
+    if (hpad) { S.helpPadX = Math.round(hpad[0] * SW); S.helpPadY = Math.round(hpad[1] * SH); }
+    var hp = r.pair("system", "helpsystem", null, "pos");
+    if (hp) S.helpMargin = Math.round(hp[0] * SW);
+    var vis = r.prop("system", "helpsystem", null, "visible");
+    S.helpShow = vis !== "false";
+    useFont(r.prop("system", "helpsystem", null, "fontPath"), "fHelp");
+    ["A", "B", "X", "Y"].forEach(function (L) {
+      useArt(r.prop("system", "helpsystem", null, "icon" + L), "btn" + L);
+    });
+
+    // ---- menu / keyboard / screensaver ----
+    var mf = r.num("menu", "menuText", "menutext", "fontSize");
+    if (mf) S.menuFont = Math.round(mf * SH * BOOST);
+    useFont(r.prop("menu", "menuText", "menutext", "fontPath"), "fMenu");
+    var mtf = r.num("menu", "menuText", "menutitle", "fontSize");
+    if (mtf) S.menuTitleFont = Math.round(mtf * SH * BOOST);
+    useFont(r.prop("menu", "menuText", "menutitle", "fontPath"), "fMenuTitle");
+    var mff = r.num("menu", "menuText", "menufooter", "fontSize");
+    if (mff) S.menuFootFont = Math.round(mff * SH * BOOST);
+    useFont(r.prop("menu", "menuText", "menufooter", "fontPath"), "fMenuFoot");
+    useArt(r.prop("menu", "menuArrow", "menuarrow", "path"), "arrow");
+    px(r.num("screen", "keyboard", null, "width"), "x", "kbWidth");
+    px(r.num("screen", "keyboard", null, "posY"), "y", "kbTop");
+    px(r.num("screen", "keyboard", null, "keySpacing"), "x", "kbSpacing");
+    px(r.num("screen", "keyboard", null, "keyRadius"), "y", "kbRadius");
+    px(r.num("screen", "keyboard", null, "iconSize"), "y", "kbIcon");
+    var kms = r.num("screen", "keyboard", null, "keyPressMs"); if (kms) S.kbFlash = Math.round(kms);
+    useArt(r.prop("screen", "keyboard", null, "backspace"), "kbBackspace");
+    useArt(r.prop("screen", "keyboard", null, "enter"), "kbEnter");
+    useArt(r.prop("screen", "keyboard", null, "shift"), "kbShiftIcon");
+    useArt(r.prop("screen", "keyboard", null, "shiftActive"), "kbShiftOn");
+    var sf = r.num("screen", "text", "screensaverClock", "fontSize");
+    if (sf) S.ssClock = Math.round(sf * SH * BOOST);
+    useFont(r.prop("screen", "text", "screensaverClock", "fontPath"), "fSaver");
+    useArt(r.prop("screen", "volumeIndicator", null, "icon"), "popVolume");
+    useArt(r.prop("screen", "brightnessIndicator", null, "icon"), "popBright");
+
+    // ---- background art (these themes bake the hint bar into it) ----
+    useArt(r.prop("system", "image", "staticBackground", "path"), "bgSystem");
+    useArt(r.prop("basic", "image", "background", "path"), "bgGamelist");
+    useArt(r.prop("menu", "menuBackground", "menubg", "path"), "bgMenu");
+
+    // background colour: fall back to the gamelist text colour's opposite is
+    // guesswork, so take it from the art if present, else leave as is.
+    var pc = r.colour("basic", "textlist", "gamelist", "primaryColor");
+    if (pc) col(pc, "text");
+
+    return Promise.all(jobs).then(function () {
+      imported = { name: (baseDir.split("/").pop() || "theme"), files: files, doc: doc };
+      return imported;
+    });
+  }
 
   // ---------- font library ----------
   // Each entry is a FILE: the theme points at a path, so weight lives in the
@@ -927,6 +1195,14 @@
     }, "62"));
   }
 
+  function drawBackdrop(scr) {
+    var slot = page === "gamelist" ? "bgGamelist" : (page === "menu" ? "bgMenu" : "bgSystem");
+    if (!ART[slot]) return;
+    var im = el("img", { left: "0px", top: "0px", width: SW + "px", height: SH + "px", objectFit: "fill" });
+    im.src = ART[slot].src; im.alt = "";
+    scr.appendChild(im);
+  }
+
   function drawOverlay(scr) {
     if (!S.ovShow || !ART.overlay) return;
     var im = el("img", {
@@ -942,6 +1218,7 @@
     var scr = document.getElementById("screen");
     scr.innerHTML = "";
     scr.style.background = css("bg");
+    drawBackdrop(scr);
     if (page === "saver") { drawSaver(scr); }
     else if (page === "keyboard") { drawTopBar(scr); drawKeyboard(scr); }
     else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawHelp(scr); drawPopup(scr); }
@@ -1006,6 +1283,50 @@
           ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
           : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
     document.getElementById("legend").innerHTML = parts.join(" · ");
+  }
+
+
+  // ---------- writing a zip ----------
+  var CRC = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t;
+  })();
+  function crc32(buf) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function makeZip(entries) {
+    // entries: [{ name, bytes }] — stored, no compression, which every
+    // unzipper accepts and keeps this dependency-free.
+    var parts = [], central = [], offset = 0, enc = new TextEncoder();
+    entries.forEach(function (e) {
+      var nameB = enc.encode(e.name), crc = crc32(e.bytes), size = e.bytes.length;
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0, true);
+      lh.setUint16(8, 0, true); lh.setUint16(10, 0, true); lh.setUint16(12, 0, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
+      lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nameB, e.bytes);
+      var ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
+      ch.setUint16(28, nameB.length, true); ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), nameB);
+      offset += 30 + nameB.length + size;
+    });
+    var cdSize = central.reduce(function (n, a) { return n + a.length; }, 0);
+    var eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 0x06054b50, true);
+    eocd.setUint16(8, entries.length, true); eocd.setUint16(10, entries.length, true);
+    eocd.setUint32(12, cdSize, true); eocd.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(eocd.buffer)]), { type: "application/zip" });
+  }
+  function dataURLToBytes(u) {
+    var b = atob(u.split(",")[1]), out = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) out[i] = b.charCodeAt(i);
+    return out;
   }
 
   // ---------- theme.xml ----------
@@ -1721,6 +2042,101 @@
     if (e.key === "ArrowUp") { move(-1); e.preventDefault(); }
     if (e.key === "ArrowDown") { move(1); e.preventDefault(); }
   });
+
+  // ---------- import / export ----------
+  function collectFiles(fileList) {
+    // returns { path: () => Promise<Uint8Array> }
+    var map = {};
+    [].slice.call(fileList).forEach(function (f) {
+      var path = (f.webkitRelativePath || f.name).replace(/\\/g, "/");
+      map[path] = function () { return f.arrayBuffer().then(function (b) { return new Uint8Array(b); }); };
+    });
+    return map;
+  }
+  function openThemeFiles(map) {
+    var xmlPath = Object.keys(map).filter(function (k) { return /(^|\/)theme\.xml$/i.test(k); })
+      .sort(function (a, b) { return a.split("/").length - b.split("/").length; })[0];
+    if (!xmlPath) { toast("No theme.xml in that selection"); return; }
+    map[xmlPath]().then(function (bytes) {
+      return applyTheme(map, xmlPath, new TextDecoder().decode(bytes));
+    }).then(function (info) {
+      buildRail(); render();
+      toast("Opened " + info.name);
+    }).catch(function (e) { toast(e.message || "Could not read that theme"); });
+  }
+  function openZip(file) {
+    file.arrayBuffer().then(function (b) {
+      var entries = readZip(new Uint8Array(b));
+      var map = {};
+      Object.keys(entries).forEach(function (name) {
+        if (/\/$/.test(name)) return;
+        map[name] = function () { return inflateEntry(entries[name]); };
+      });
+      openThemeFiles(map);
+    }).catch(function (e) { toast(e.message || "Could not read that zip"); });
+  }
+
+  function buildIO() {
+    var box = document.getElementById("io");
+    box.innerHTML = "";
+    var zl = el("label"); zl.className = "btn"; zl.style.cursor = "pointer"; zl.textContent = "Import .zip";
+    var zi = el("input"); zi.type = "file"; zi.accept = ".zip,application/zip"; zi.style.display = "none";
+    zi.addEventListener("change", function () { if (zi.files[0]) openZip(zi.files[0]); });
+    zl.appendChild(zi);
+
+    var fl = el("label"); fl.className = "btn"; fl.style.cursor = "pointer"; fl.textContent = "Import folder";
+    var fi = el("input"); fi.type = "file"; fi.multiple = true; fi.style.display = "none";
+    try { fi.webkitdirectory = true; } catch (e) {}
+    fi.addEventListener("change", function () { if (fi.files.length) openThemeFiles(collectFiles(fi.files)); });
+    fl.appendChild(fi);
+
+    box.appendChild(zl); box.appendChild(fl);
+  }
+
+  function downloadZip() {
+    var enc = new TextEncoder();
+    var name = (imported && imported.name ? imported.name : "My Mono theme");
+    var entries = [];
+    var seen = {};
+    function add(path, bytes) { if (!seen[path]) { seen[path] = 1; entries.push({ name: path, bytes: bytes }); } }
+
+    // the edited theme.xml always wins
+    add(name + "/theme.xml", enc.encode(document.getElementById("xml").textContent + "\n"));
+
+    // anything loaded in the tool ships at the path the file refers to
+    Object.keys(ART).forEach(function (k) {
+      var p = PATHS[k];
+      if (!p || !ART[k]) return;
+      add(name + "/" + p.replace(/^\.\//, ""), dataURLToBytes(ART[k].src));
+    });
+    FONT_LIB.forEach(function (f) {
+      if (f.src.indexOf("data:") !== 0) return;
+      add(name + "/fonts/" + f.id, dataURLToBytes(f.src));
+    });
+
+    var rest = [];
+    if (imported) {
+      // carry the rest of the original theme across untouched
+      var base = Object.keys(imported.files).filter(function (k) { return !/(^|\/)theme\.xml$/i.test(k); });
+      rest = base.map(function (k) {
+        return Promise.resolve(imported.files[k]()).then(function (bytes) {
+          var rel = k.indexOf("/") >= 0 ? k.slice(k.indexOf("/") + 1) : k;
+          add(name + "/" + rel, bytes);
+        }).catch(function () {});
+      });
+    }
+    Promise.all(rest).then(function () {
+      var blob = makeZip(entries);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name.replace(/[^\w.\- ]+/g, "") + ".zip";
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      toast(entries.length + " files zipped");
+    });
+  }
+  document.getElementById("zip").addEventListener("click", downloadZip);
+
   // ---------- bottom sheet ----------
   var railEl = document.getElementById("rail");
   var grab = document.getElementById("grabber");
@@ -1753,7 +2169,7 @@
   if (/sheet/i.test(location.hash)) setSheet(true);
 
   if (/general/i.test(location.hash)) railMode = "general";
-  buildPad();
+  buildPad(); buildIO();
   buildPresets(); buildRail(); buildTabs(); render();
   // register the bundled faces, then redraw so measurements use real metrics
   Promise.all(FONT_LIB.map(registerFont)).then(function () { render(); });
