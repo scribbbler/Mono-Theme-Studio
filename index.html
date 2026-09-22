@@ -418,7 +418,7 @@
     barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
     clockX: 24, clockY: 8, clockSize: 20,
     battRight: 20, battY: 8, battSize: 20, battGap: 6,
-    logoTint: true,
+    logoTint: true, helpPillOn: true,
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
@@ -741,7 +741,9 @@
       // row text still needs a colour: take it from the carousel's own text layer
       col(r.colour("system", "text", "logoText", "color"), "text");
     }
-    col(r.colour("system", "helpsystem", null, "backgroundColor"), "helpPill");
+    var helpBg = r.colour("system", "helpsystem", null, "backgroundColor");
+    S.helpPillOn = !!helpBg;      // stock ES draws no pill behind the hints
+    if (helpBg) col(helpBg, "helpPill");
     col(r.colour("system", "helpsystem", null, "textColor"), "helpText");
     col(r.colour("system", "helpsystem", null, "iconColor"), "helpChip");
     col(r.colour("screen", "keyboard", null, "keyColor"), "kbKey");
@@ -910,7 +912,13 @@
     }));
 
     return Promise.all(jobs).then(function () {
+      var untouched = [];
+      if (!r.el("screen", "keyboard", null)) untouched.push("keyboard");
+      if (!r.el("screen", "text", "screensaverClock")) untouched.push("screensaver");
+      if (!r.el("screen", "volumeIndicator", null)) untouched.push("pop-ups");
+      if (!r.el("screen", "batteryIndicator", null)) untouched.push("battery");
       imported = { name: (baseDir.split("/").pop() || "theme"), files: files, doc: doc,
+        untouched: untouched,
         clamped: clamped.filter(function (v, i, a) { return a.indexOf(v) === i; }) };
       return imported;
     });
@@ -1093,8 +1101,9 @@
       var box = el("div", {
         position: "absolute", top: top + "px", height: pillH + "px",
         display: "flex", alignItems: "center", gap: "22px",
-        padding: "0 " + S.helpPadX + "px", background: css("helpPill"),
-        borderRadius: (pillH / 2) + "px"
+        padding: S.helpPillOn ? "0 " + S.helpPadX + "px" : "0",
+        background: S.helpPillOn ? css("helpPill") : "transparent",
+        borderRadius: S.helpPillOn ? (pillH / 2) + "px" : "0"
       });
       g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
       if (gi === 0) box.style.left = (S.helpMargin - S.helpPadX) + "px";
@@ -1479,6 +1488,12 @@
     }
   }
 
+  function themeNote() {
+    if (!imported || !imported.untouched || !imported.untouched.length) return "";
+    return " · <b>" + imported.name + "</b> does not style: " + imported.untouched.join(", ") +
+      " (showing engine defaults)";
+  }
+
   function renderLegend() {
     var pitch = S.carHeight / S.carRows;
     var parts = page === "carousel"
@@ -1497,7 +1512,7 @@
         : page === "saver"
           ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
           : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
-    document.getElementById("legend").innerHTML = parts.join(" · ");
+    document.getElementById("legend").innerHTML = parts.join(" · ") + themeNote();
   }
 
 
@@ -1866,6 +1881,7 @@
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
+      { k: "helpPillOn", t: "bool", label: "Pill behind the hints", hint: "Stock EmulationStation draws the hints with no pill; the pill is this build's addition." },
       { k: "helpFont", t: "num", label: "Label size", min: 12, max: 30, step: 1, unit: "px" },
       { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px" },
       { k: "helpPadX", t: "num", label: "Pill padding X", min: 0, max: 30, step: 1, unit: "px" },
