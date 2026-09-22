@@ -1,0 +1,1486 @@
+<title>Mono Theme Studio</title>
+<style>
+  @font-face {
+    font-family: "BPreplay";
+    src: url("BPreplay-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "BPreplay";
+    src: url("BPreplay-Regular.otf") format("opentype");
+    font-weight: 400;
+    font-display: block;
+  }
+
+  :root {
+    --ground: #eef3f3;
+    --surface: #ffffff;
+    --surface-2: #f6fafa;
+    --ink: #101819;
+    --muted: #5b6b6d;
+    --line: #d9e3e3;
+    --accent: #0a6c76;
+    --accent-ink: #ffffff;
+    --accent-soft: #dff0f1;
+    --shadow: 0 1px 2px rgba(16, 24, 25, .06), 0 8px 24px rgba(16, 24, 25, .06);
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0c1112;
+      --surface: #141b1c;
+      --surface-2: #101718;
+      --ink: #e7eeee;
+      --muted: #8a9b9d;
+      --line: #223032;
+      --accent: #4ac8d3;
+      --accent-ink: #062023;
+      --accent-soft: #0f292c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0c1112;
+    --surface: #141b1c;
+    --surface-2: #101718;
+    --ink: #e7eeee;
+    --muted: #8a9b9d;
+    --line: #223032;
+    --accent: #4ac8d3;
+    --accent-ink: #062023;
+    --accent-soft: #0f292c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* ---------- shell ---------- */
+  header.bar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px max(20px, calc((100% - 1300px) / 2));
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 16px; }
+  .brand span { color: var(--muted); font-size: 12.5px; }
+  .presets { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+    padding: 6px 11px; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 550;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+
+  main {
+    display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0;
+    align-items: start; min-height: calc(100dvh - 57px);
+    width: 100%; max-width: 1300px; margin: 0 auto;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  /* ---------- control rail ---------- */
+  .rail { border-right: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); }
+  .railtabs {
+    display: flex; gap: 6px; padding: 12px 18px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 57px; background: var(--surface); z-index: 5;
+  }
+  .railtabs .btn { flex: 1; }
+  details.group { border-bottom: 1px solid var(--line); }
+  details.group > summary {
+    cursor: pointer; padding: 12px 18px; font-size: 11.5px; font-weight: 700;
+    letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
+    display: flex; align-items: center; gap: 8px; list-style: none;
+  }
+  details.group > summary::-webkit-details-marker { display: none; }
+  details.group > summary::before {
+    content: "›"; font-size: 15px; transition: transform .15s ease; display: inline-block; color: var(--accent);
+  }
+  details.group[open] > summary::before { transform: rotate(90deg); }
+  .fields { padding: 2px 18px 16px; display: flex; flex-direction: column; gap: 11px; }
+
+  .field { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+  .field > label { font-size: 12.5px; color: var(--ink); }
+  .field .hint { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: -4px; }
+  .field .row { display: flex; align-items: center; gap: 8px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .field.slider { grid-template-columns: 1fr; }
+  .field.slider .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  input[type="color"] {
+    width: 34px; height: 24px; padding: 0; border: 1px solid var(--line);
+    border-radius: 5px; background: none; cursor: pointer;
+  }
+  input[type="text"].hex {
+    width: 84px; font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+    padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2);
+  }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    border: 0; background: var(--surface-2); padding: 5px 10px; cursor: pointer;
+    font-size: 12px; font-weight: 550; color: var(--muted);
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .switch input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  /* ---------- stage ---------- */
+  .stage { padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .console {
+    position: relative; width: 820px; height: 1150px;
+    transform-origin: top left;
+  }
+  .console .shell {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    color: var(--muted); opacity: .45; pointer-events: none;
+  }
+  .screen {
+    position: absolute; left: 90px; top: 90px;
+    width: 640px; height: 480px; overflow: hidden;
+    border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
+  }
+  .screen * { position: absolute; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--muted); text-align: center; }
+  .legend b { color: var(--ink); font-weight: 600; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .export { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 10px; }
+  .export .head { display: flex; align-items: center; gap: 10px; }
+  .export h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .export .actions { margin-left: auto; display: flex; gap: 6px; }
+  pre.xml {
+    margin: 0; max-height: 340px; overflow: auto; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--ink);
+    white-space: pre; tab-size: 2;
+  }
+  .note {
+    font-size: 12px; color: var(--muted); max-width: 66ch; border-left: 2px solid var(--accent);
+    padding-left: 12px;
+  }
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--ink); color: var(--ground); padding: 8px 14px; border-radius: 8px;
+    font-size: 12.5px; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="bar">
+  <div class="brand">
+    <h1>Mono Theme Studio</h1>
+    <span>R36S · 640×480 · live theme.xml</span>
+  </div>
+  <div class="presets" id="presets"></div>
+</header>
+
+<main>
+  <aside class="rail" id="rail"></aside>
+
+  <section class="stage">
+    <div class="tabs" id="tabs"></div>
+    <div class="console" id="console">
+      <svg class="shell" viewBox="0 0 820 1150" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+        <!-- shoulder buttons on the side edges -->
+        <path d="M10 176h-8v54h8" /><path d="M10 250h-8v54h8" />
+        <path d="M810 176h8v54h-8" /><path d="M810 250h8v54h-8" />
+        <!-- body: rounded brick with a chamfered speaker corner -->
+        <path d="M66 18h688a56 56 0 0 1 56 56v952l-96 106H66a56 56 0 0 1-56-56V74a56 56 0 0 1 56-56z" />
+        <!-- screen glass -->
+        <rect x="70" y="70" width="680" height="520" rx="12" />
+        <!-- d-pad: cross with a centre disc -->
+        <path d="M158 762v-64a10 10 0 0 1 10-10h50v-50a10 10 0 0 1 10-10h64a10 10 0 0 1 10 10v50h50a10 10 0 0 1 10 10v64a10 10 0 0 1-10 10h-50v50a10 10 0 0 1-10 10h-64a10 10 0 0 1-10-10v-50h-50a10 10 0 0 1-10-10z" />
+        <circle cx="250" cy="730" r="22" />
+        <!-- menu button -->
+        <circle cx="410" cy="700" r="24" />
+        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
+           font-size="13" font-weight="600" text-anchor="middle" opacity=".7">
+          <text x="410" y="748">MENU</text>
+        </g>
+        <!-- action buttons: X top, Y left, A right, B bottom -->
+        <circle cx="620" cy="686" r="30" /><circle cx="556" cy="750" r="30" />
+        <circle cx="684" cy="750" r="30" /><circle cx="620" cy="814" r="30" />
+        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
+           font-size="21" font-weight="600" text-anchor="middle" opacity=".85">
+          <text x="620" y="694">X</text><text x="556" y="758">Y</text>
+          <text x="684" y="758">A</text><text x="620" y="822">B</text>
+        </g>
+        <!-- select / start, slanted like the real thing -->
+        <g transform="rotate(-24 360 900)">
+          <rect x="326" y="886" width="68" height="26" rx="13" />
+        </g>
+        <g transform="rotate(-24 470 900)">
+          <rect x="436" y="886" width="68" height="26" rx="13" />
+        </g>
+        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
+           font-size="12" font-weight="600" text-anchor="middle" opacity=".65">
+          <text x="352" y="952" transform="rotate(-24 352 952)">SELECT</text>
+          <text x="462" y="952" transform="rotate(-24 462 952)">START</text>
+        </g>
+        <!-- speaker grille in the chamfered corner -->
+        <g opacity=".7" stroke-width="7">
+          <line x1="604" y1="1064" x2="652" y2="1016" />
+          <line x1="628" y1="1064" x2="676" y2="1016" />
+          <line x1="652" y1="1064" x2="700" y2="1016" />
+          <line x1="676" y1="1064" x2="716" y2="1024" />
+          <line x1="700" y1="1064" x2="728" y2="1036" />
+        </g>
+      </svg>
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <div class="export">
+      <div class="head">
+        <h2>theme.xml</h2>
+        <div class="actions">
+          <button class="btn" id="copy">Copy</button>
+          <button class="btn primary" id="download">Download</button>
+        </div>
+      </div>
+      <pre class="xml" id="xml"></pre>
+      <p class="note">
+        Copy a Mono theme folder, drop this <code>theme.xml</code> in, and pick it on the device.
+        Sizes here are the pixels you see on a 640×480 panel; the file stores them as screen
+        fractions, with font sizes divided by the engine's 1.31 boost.
+        Menu row spacing and the button-hint labels come from the build, not the theme.
+      </p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SW = 640, SH = 480, BOOST = 1.31;
+
+  var PRESETS = {
+    "Mono Dark": {
+      bg: "#000000", text: "#F7FBF7", pill: "#F7FBF7", pillText: "#000000",
+      helpPill: "#202420", helpText: "#F7FBF7", helpChip: "#DADADA",
+      carRows: 5, carTop: 42, carHeight: 380, carRowH: 72, carPillH: 72, carRadius: 36,
+      carFit: false, carPillW: 624, carPad: 25, carIndent: 32, carFont: 41, listScroll: false,
+      glTop: 48, glLeft: 4, glWidth: 632, glFont: 32, glPitch: 53, glPillH: 52,
+      glRadius: 26, glFit: false, glInset: 16, glHeader: 20,
+      helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
+      barFont: 20
+    },
+    "Mono Light": {
+      bg: "#E0E0E0", text: "#000000", pill: "#000000", pillText: "#E0E0E0",
+      helpPill: "#CACACA", helpText: "#000000", helpChip: "#252525",
+      carRows: 5, carTop: 42, carHeight: 380, carRowH: 72, carPillH: 72, carRadius: 36,
+      carFit: false, carPillW: 624, carPad: 25, carIndent: 32, carFont: 41, listScroll: false,
+      glTop: 48, glLeft: 4, glWidth: 632, glFont: 32, glPitch: 53, glPillH: 52,
+      glRadius: 26, glFit: false, glInset: 16, glHeader: 20,
+      helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
+      barFont: 20
+    },
+    "Mono Fit Dark": {
+      bg: "#000000", text: "#F7FBF7", pill: "#F7FBF7", pillText: "#000000",
+      helpPill: "#202420", helpText: "#F7FBF7", helpChip: "#DADADA",
+      carRows: 5, carTop: 42, carHeight: 380, carRowH: 72, carPillH: 72, carRadius: 36,
+      carFit: true, carPillW: 624, carPad: 25, carIndent: 33, carFont: 41, listScroll: true,
+      glTop: 48, glLeft: 8, glWidth: 624, glFont: 32, glPitch: 53, glPillH: 52,
+      glRadius: 26, glFit: true, glInset: 20, glHeader: 20,
+      helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
+      barFont: 20
+    },
+    "Mono Fit Light": {
+      bg: "#E0E0E0", text: "#000000", pill: "#000000", pillText: "#E0E0E0",
+      helpPill: "#CACACA", helpText: "#000000", helpChip: "#252525",
+      carRows: 5, carTop: 42, carHeight: 380, carRowH: 72, carPillH: 72, carRadius: 36,
+      carFit: true, carPillW: 624, carPad: 25, carIndent: 33, carFont: 41, listScroll: true,
+      glTop: 48, glLeft: 8, glWidth: 624, glFont: 32, glPitch: 53, glPillH: 52,
+      glRadius: 26, glFit: true, glInset: 20, glHeader: 20,
+      helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
+      barFont: 20
+    }
+  };
+
+  PRESETS["Mono Classic"] = {
+    bg: "#FFFFFF", text: "#000000", pill: "#4FA0F0", pillText: "#FFFFFF",
+    helpPill: "#E6E6E6", helpText: "#000000", helpChip: "#4A4A4A",
+    carRows: 5, carTop: 42, carHeight: 380, carRowH: 72, carPillH: 72, carRadius: 0,
+    carFit: false, carPillW: 640, carPad: 25, carIndent: 32, carFont: 41, listScroll: false,
+    glTop: 48, glLeft: 0, glWidth: 640, glFont: 32, glPitch: 53, glPillH: 52,
+    glRadius: 0, glFit: false, glInset: 20, glHeader: 20,
+    helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
+    barFont: 20, pillGrad: true, pillEnd: "#1257C9", kbKey: "#D8D8D8"
+  };
+
+  // Keyboard / screensaver / pop-up values are shared across the presets; the
+  // key fill is the one that has to differ, so light themes stay readable.
+  var SHARED = {
+    kbWidth: 624, kbTop: 116, kbSpacing: 6, kbRadius: 8, kbIcon: 24,
+    kbPress: "#CCCCCC", kbFlash: 150, kbShift: false,
+    ssClock: 100, ssLock: true, ssCharge: false,
+    // per-layer typography: font file, uppercase, line spacing
+    fCar: "BPreplay-Bold.otf", uCar: false, lsCar: 1.171,
+    fGl: "BPreplay-Bold.otf", uGl: false,
+    fGlHead: "BPreplay-Bold.otf", uGlHead: true,
+    fClock: "BPreplay-Bold-Clock.otf",
+    fBatt: "BPreplay-Bold-Clock.otf",
+    fHelp: "BPreplay-Bold.otf", uHelp: true,
+    fMenu: "BPreplay-Bold.otf", menuFont: 23,
+    fMenuTitle: "BPreplay-Bold.otf", menuTitleFont: 20,
+    fMenuFoot: "BPreplay-Regular.otf", menuFootFont: 18,
+    fSaver: "BPreplay-Bold-Clock.otf",
+    fPop: "BPreplay-Bold.otf",
+    pillGrad: false, pillEnd: "#1257C9",
+    ovShow: true, ovOpacity: 100, ovBlend: "normal", ovPixel: true,
+    textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
+    helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100
+  };
+  Object.keys(PRESETS).forEach(function (name) {
+    var p = PRESETS[name];
+    for (var k in SHARED) if (!(k in p)) p[k] = SHARED[k];
+    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#C9C9C9" : "#0A0A0A";
+  });
+
+  var S = Object.assign({}, PRESETS["Mono Dark"]);
+
+  // Swappable art: a loaded file is previewed here and its path is written
+  // into theme.xml. Drop the same file into the theme's art/ folder.
+  var ICONS = [
+    { k: "battery", label: "Battery", path: "./art/battery/battery-100.svg" },
+    { k: "btnX", label: "X button", path: "./art/buttons/x.png" },
+    { k: "btnY", label: "Y button", path: "./art/buttons/y.png" },
+    { k: "btnA", label: "A button", path: "./art/buttons/a.png" },
+    { k: "btnB", label: "B button", path: "./art/buttons/b.png" },
+    { k: "arrow", label: "Menu arrow", path: "./art/icons/arrow.svg" },
+    { k: "kbBackspace", label: "Key: backspace", path: "./art/keyboard/backspace.svg" },
+    { k: "kbEnter", label: "Key: enter", path: "./art/keyboard/enter.svg" },
+    { k: "kbShiftIcon", label: "Key: shift", path: "./art/keyboard/shift.svg" },
+    { k: "kbShiftOn", label: "Key: shift (active)", path: "./art/keyboard/shift-active.png" },
+    { k: "ssLockIcon", label: "Screensaver lock", path: "./art/icons/lock.svg" },
+    { k: "ssBattIcon", label: "Screensaver battery", path: "./art/icons/battery.svg" },
+    { k: "popVolume", label: "Volume pop-up", path: "./art/icons/volume.svg" },
+    { k: "popBright", label: "Brightness pop-up", path: "./art/icons/brightness.svg" },
+    { k: "overlay", label: "Screen overlay PNG", path: "./art/overlay.png" }
+  ];
+  var ART = {};   // k -> { src, name }
+  var PATHS = {}; // k -> path string written into theme.xml
+  ICONS.forEach(function (i) { PATHS[i.k] = i.path; });
+
+  var page = "carousel";
+  var cursor = 2;          // carousel selection index
+  var glCursor = 0;        // gamelist selection index
+
+  var SYSTEMS = ["Arcade", "Capcom System I", "Capcom System II", "Capcom System III", "MAME", "Game Boy", "Mega Drive", "Neo Geo"];
+  var GAMES = [
+    "Adventures of Starg Saver, The (USA, Eu…", "Aerostar (USA, Europe)", "Amazing Penguin (USA, Europe)",
+    "Astro Rabby (Japan)", "Atomic Punk (USA)", "Avenging Spirit (USA, Europe)", "Balloon Kid (USA, Europe)"
+  ];
+  var MENU_ROWS = ["ArkOS4Clone Settings", "UI Settings", "Sound Settings", "Game Collection Settings",
+    "Scraper", "Options", "Advanced Settings", "Quit"];
+
+  // ---------- helpers ----------
+  function el(tag, style, text) {
+    var n = document.createElement(tag);
+    if (style) { for (var k in style) n.style[k] = style[k]; }
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  var canvas = document.createElement("canvas");
+  var ctx = canvas.getContext("2d");
+
+  // ---------- font library ----------
+  // Each entry is a FILE: the theme points at a path, so weight lives in the
+  // file, not in a CSS weight. Bundled faces load from the page; anything the
+  // designer loads is registered the same way.
+  var FONT_LIB = [
+    { id: "BPreplay-Bold.otf", label: "BPreplay Bold", src: "BPreplay-Bold.otf", fam: "F_bold" },
+    { id: "BPreplay-Regular.otf", label: "BPreplay Regular", src: "BPreplay-Regular.otf", fam: "F_reg" },
+    { id: "BPreplay-Bold-Clock.otf", label: "BPreplay Bold Clock", src: "BPreplay-Bold-Clock.otf", fam: "F_clock" }
+  ];
+  var fontSeq = 0;
+  function registerFont(entry) {
+    if (!window.FontFace) return Promise.resolve();
+    var ff = new FontFace(entry.fam, "url(" + entry.src + ")");
+    return ff.load().then(function (f) { document.fonts.add(f); }).catch(function () {});
+  }
+  function famOf(id) {
+    for (var i = 0; i < FONT_LIB.length; i++) if (FONT_LIB[i].id === id) return FONT_LIB[i].fam;
+    return FONT_LIB[0].fam;
+  }
+  function fontCss(px, id) { return px + "px " + famOf(id) + ", sans-serif"; }
+  function textWidth(str, px, id) {
+    ctx.font = fontCss(px, id);
+    return ctx.measureText(str).width;
+  }
+  function upper(str, on) { return on ? str.toUpperCase() : str; }
+
+  // Row pitch depends on the face's own line height. The browser's metric and
+  // FreeType's differ slightly, so calibrate against BPreplay Bold, whose
+  // ratio was measured on the device (32.9px box for a 32px face).
+  function rawRatio(id) {
+    ctx.font = fontCss(100, id);
+    var m = ctx.measureText("HgjÅ");
+    if (m.fontBoundingBoxAscent == null) return 1.028;
+    return (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent) / 100;
+  }
+  function glyphBox(px, id) {
+    var base = rawRatio("BPreplay-Bold.otf") || 1.028;
+    var k = 1.028 / base;
+    return px * rawRatio(id) * k;
+  }
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove("show"); }, 1600);
+  }
+  function hex(v) { return v.replace("#", "").toUpperCase(); }
+  function f(n, d) { // fraction with d decimals, trimmed
+    var s = n.toFixed(d == null ? 7 : d);
+    return s.replace(/0+$/, "").replace(/\.$/, "") || "0";
+  }
+
+  // A layer's opacity is the alpha byte of its colour — that is how the engine
+  // expresses it, so the slider drives the same value the theme file stores.
+  function alphaOf(key) { var a = S[key + "A"]; return a == null ? 100 : a; }
+  function css(key) {
+    var h = S[key] || "#000000", a = alphaOf(key) / 100;
+    var n = parseInt(h.slice(1), 16);
+    return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+  }
+  function hex8(key) {
+    var a = Math.round(alphaOf(key) * 255 / 100).toString(16).toUpperCase();
+    return hex(S[key]) + (a.length < 2 ? "0" + a : a);
+  }
+
+  function pillBg() {
+    return S.pillGrad ? "linear-gradient(180deg, " + css("pill") + " 0%, " + css("pillEnd") + " 100%)" : css("pill");
+  }
+
+  // ---------- preview ----------
+  function drawTopBar(scr) {
+    var fs = S.barFont;
+    var clock = el("div", {
+      left: "24px", top: "8px", width: "200px", height: "32px", display: "flex",
+      alignItems: "center", font: fontCss(fs, S.fClock), color: css("text")
+    }, "04:20 AM");
+    scr.appendChild(clock);
+
+    if (page === "gamelist" || page === "menu") {
+      var title = el("div", {
+        left: "20px", top: "8px", width: (SW - 40) + "px", height: "32px", display: "flex",
+        alignItems: "center", justifyContent: "center",
+        font: page === "menu" ? fontCss(S.menuTitleFont, S.fMenuTitle) : fontCss(S.glHeader, S.fGlHead),
+        color: css("text")
+      }, upper(page === "menu" ? "Main Menu" : "Game Boy", page === "menu" ? true : S.uGlHead));
+      scr.appendChild(title);
+    }
+
+    var batt = el("div", {
+      left: "0px", top: "8px", width: "620px", height: "32px", display: "flex",
+      alignItems: "center", justifyContent: "flex-end", gap: "6px",
+      font: fontCss(fs, S.fBatt), color: css("text")
+    });
+    if (ART.battery) {
+      var bimg = el("img", { position: "relative", width: "32px", height: "32px", objectFit: "contain" });
+      bimg.src = ART.battery.src; bimg.alt = "";
+      batt.appendChild(bimg);
+    } else {
+      var icon = el("div", {
+        position: "relative", width: "29px", height: "16px", border: "2px solid " + css("text"),
+        borderRadius: "4px"
+      });
+      var fill = el("div", { position: "absolute", left: "2px", top: "2px", right: "4px", bottom: "2px", background: css("text"), borderRadius: "1px" });
+      icon.appendChild(fill);
+      batt.appendChild(icon);
+    }
+    batt.appendChild(el("span", { position: "relative" }, "99%"));
+    scr.appendChild(batt);
+  }
+
+  function chip(letter, label) {
+    var wrap = el("div", { position: "relative", display: "flex", alignItems: "center", gap: "8px" });
+    var art = ART["btn" + letter];
+    var circle;
+    if (art) {
+      circle = el("div", { position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px" });
+      var im = el("img", { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "contain" });
+      im.src = art.src; im.alt = letter;
+      circle.appendChild(im);
+    } else {
+      circle = el("div", {
+        position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px", borderRadius: "50%",
+        background: css("helpChip"), color: css("helpPill"), display: "flex", alignItems: "center",
+        justifyContent: "center", font: fontCss(Math.round(S.helpIcon * 0.62), S.fHelp)
+      }, letter);
+    }
+    var txt = el("div", {
+      position: "relative", font: fontCss(S.helpFont, S.fHelp),
+      color: css("helpText"), whiteSpace: "nowrap"
+    }, upper(label, S.uHelp));
+    wrap.appendChild(circle); wrap.appendChild(txt);
+    return wrap;
+  }
+
+  function drawHelp(scr) {
+    if (!S.helpShow) return;
+    var groups = page === "carousel"
+      ? [[["X", "Random"], ["Y", "Search"]], [["A", "Open"]]]
+      : page === "gamelist"
+        ? [[["X", "Random"], ["Y", "Favorite"]], [["B", "Back"], ["A", "Launch"]]]
+        : [[["B", "Back"]], [["A", "Select"]]];
+    var pillH = S.helpIcon + S.helpPadY * 2;
+    var top = SH - 8 - pillH;
+
+    groups.forEach(function (g, gi) {
+      var box = el("div", {
+        position: "absolute", top: top + "px", height: pillH + "px",
+        display: "flex", alignItems: "center", gap: "22px",
+        padding: "0 " + S.helpPadX + "px", background: css("helpPill"),
+        borderRadius: (pillH / 2) + "px"
+      });
+      g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
+      if (gi === 0) box.style.left = (S.helpMargin - S.helpPadX) + "px";
+      else box.style.right = (S.helpMargin - S.helpPadX) + "px";
+      scr.appendChild(box);
+    });
+  }
+
+  function drawCarousel(scr) {
+    var pitch = S.carHeight / S.carRows;
+    var centerSlot = Math.floor((S.carRows - 1) / 2);
+    var first, selSlot;
+    if (S.listScroll) {
+      var maxCam = Math.max(0, SYSTEMS.length - S.carRows);
+      var cam = Math.min(Math.max(cursor - centerSlot, 0), maxCam);
+      first = cam; selSlot = cursor - cam;
+    } else {
+      first = cursor - centerSlot; selSlot = centerSlot;
+    }
+
+    var selName = SYSTEMS[((cursor % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length];
+    var pillW = S.carFit
+      ? Math.min(textWidth(upper(selName, S.uCar), S.carFont, S.fCar) + S.carPad * 2, S.carPillW)
+      : S.carPillW;
+    var pillX = S.carFit ? (S.carIndent - S.carPad) : (SW - pillW) / 2;
+    var rowTop = S.carTop + selSlot * pitch + (pitch - S.carRowH) / 2;
+    var pillY = rowTop + (S.carRowH - S.carPillH) / 2;
+
+    scr.appendChild(el("div", {
+      left: pillX + "px", top: pillY + "px", width: pillW + "px", height: S.carPillH + "px",
+      background: pillBg(), borderRadius: S.carRadius + "px"
+    }));
+
+    for (var slot = 0; slot < S.carRows; slot++) {
+      var idx = first + slot;
+      if (S.listScroll && (idx < 0 || idx >= SYSTEMS.length)) continue;
+      var name = SYSTEMS[((idx % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length];
+      var isSel = slot === selSlot;
+      var y = S.carTop + slot * pitch + (pitch - S.carRowH) / 2;
+      scr.appendChild(el("div", {
+        left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
+        width: (SW - S.carIndent) + "px", display: "flex", alignItems: "center",
+        font: fontCss(S.carFont, S.fCar),
+        color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
+      }, upper(name, S.uCar)));
+    }
+  }
+
+  function drawGamelist(scr) {
+    var rows = Math.floor((SH - 48 - 60) / S.glPitch);
+    for (var i = 0; i < rows; i++) {
+      var name = GAMES[i % GAMES.length];
+      var isSel = i === glCursor;
+      var y = S.glTop + i * S.glPitch;
+      if (isSel) {
+        var w = S.glFit
+          ? Math.min(textWidth(upper(name, S.uGl), S.glFont, S.fGl) + S.glInset * 2, S.glWidth)
+          : S.glWidth;
+        scr.appendChild(el("div", {
+          left: S.glLeft + "px", top: (y - 1) + "px", width: w + "px",
+          height: S.glPillH + "px", background: pillBg(), borderRadius: S.glRadius + "px"
+        }));
+      }
+      scr.appendChild(el("div", {
+        left: (S.glLeft + S.glInset) + "px", top: y + "px", height: S.glPillH + "px",
+        width: (S.glWidth - S.glInset) + "px", display: "flex", alignItems: "center",
+        font: fontCss(S.glFont, S.fGl),
+        color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap", overflow: "hidden"
+      }, upper(name, S.uGl)));
+    }
+  }
+
+  function drawMenu(scr) {
+    var pitch = 38, rowH = 36, top = 47;
+    for (var i = 0; i < MENU_ROWS.length; i++) {
+      var y = top + i * pitch;
+      if (i === 0) {
+        scr.appendChild(el("div", {
+          left: "10px", top: y + "px", width: "620px", height: rowH + "px",
+          background: pillBg(), borderRadius: "18px"
+        }));
+      }
+      scr.appendChild(el("div", {
+        left: "22px", top: y + "px", height: rowH + "px", width: "580px",
+        display: "flex", alignItems: "center",
+        font: fontCss(S.menuFont, S.fMenu), color: i === 0 ? css("pillText") : css("text"),
+        whiteSpace: "nowrap"
+      }, MENU_ROWS[i].toUpperCase()));
+      if (ART.arrow) {
+        var ai = el("img", { left: "598px", top: (y + (rowH - 24) / 2) + "px", width: "24px", height: "24px", objectFit: "contain" });
+        ai.src = ART.arrow.src; ai.alt = "";
+        scr.appendChild(ai);
+      } else {
+        scr.appendChild(el("div", {
+          left: "600px", top: y + "px", height: rowH + "px", display: "flex", alignItems: "center",
+          font: fontCss(22, S.fMenu), color: i === 0 ? css("pillText") : css("text")
+        }, "›"));
+      }
+    }
+  }
+
+  var KB_ROWS = [
+    ["1","2","3","4","5","6","7","8","9","0","-","=","DEL"],
+    ["q","w","e","r","t","y","u","i","o","p","[","]","\\"],
+    ["a","s","d","f","g","h","j","k","l",";","'","OK","-span-"],
+    ["~","z","x","c","v","b","n","m",",",".","/","SHIFT","-span-"]
+  ];
+  var KB_SHIFTED = {
+    "1":"!","2":"@","3":"#","4":"$","5":"%","6":"^","7":"&","8":"*","9":"(","0":")","-":"_","=":"+",
+    "[":"{","]":"}","\\":"|",";":":","'":"\"",",":"<",".":">","/":"?"
+  };
+  var kbFocus = [1, 3];   // row, col of the focused key
+  var kbPressed = false;
+
+  function drawKeyboard(scr) {
+    var cols = 13;
+    var left = (SW - S.kbWidth) / 2;
+    var cell = S.kbWidth / cols;
+    var inset = S.kbSpacing / 2;
+    var keyH = cell - S.kbSpacing;
+
+    // title + text field, as the search popup shows them
+    scr.appendChild(el("div", {
+      left: left + "px", top: (S.kbTop - 76) + "px", width: S.kbWidth + "px", height: "26px",
+      display: "flex", alignItems: "center", textTransform: "uppercase",
+      font: fontCss(20, S.fMenuTitle), color: css("text")
+    }, "Search".toUpperCase()));
+    var fieldH = 36;
+    scr.appendChild(el("div", {
+      left: left + "px", top: (S.kbTop - 44) + "px", width: S.kbWidth + "px", height: fieldH + "px",
+      border: "2px solid " + css("text"), borderRadius: "8px", opacity: ".75"
+    }));
+    scr.appendChild(el("div", {
+      left: (left + 12) + "px", top: (S.kbTop - 44) + "px", height: fieldH + "px",
+      display: "flex", alignItems: "center", font: fontCss(20, S.fMenu), color: css("text")
+    }, "mario|"));
+
+    KB_ROWS.forEach(function (row, r) {
+      var c = 0;
+      while (c < cols) {
+        var label = row[c];
+        if (label === "-span-") { c++; continue; }
+        var span = (row[c + 1] === "-span-") ? 2 : 1;
+        var isFocus = (kbFocus[0] === r && kbFocus[1] === c);
+        var isFlash = isFocus && kbPressed;
+        var x = left + c * cell + inset;
+        var y = S.kbTop + r * cell + inset;
+        var w = cell * span - S.kbSpacing;
+
+        var fill = isFlash ? css("kbPress") : (isFocus ? css("pill") : css("kbKey"));
+        var ink = isFlash ? css("kbKey") : (isFocus ? css("pillText") : css("text"));
+        scr.appendChild(el("div", {
+          left: x + "px", top: y + "px", width: w + "px", height: keyH + "px",
+          background: fill, borderRadius: S.kbRadius + "px"
+        }));
+
+        var iconKey = label === "DEL" ? "kbBackspace" : label === "OK" ? "kbEnter"
+          : label === "SHIFT" ? (S.kbShift ? "kbShiftOn" : "kbShiftIcon") : null;
+        if (iconKey && ART[iconKey]) {
+          var im = el("img", {
+            left: (x + (w - S.kbIcon) / 2) + "px", top: (y + (keyH - S.kbIcon) / 2) + "px",
+            width: S.kbIcon + "px", height: S.kbIcon + "px", objectFit: "contain"
+          });
+          im.src = ART[iconKey].src; im.alt = label;
+          scr.appendChild(im);
+        } else {
+          var glyph = label;
+          if (label === "DEL") glyph = "⌫";
+          else if (label === "OK") glyph = "⏎";
+          else if (label === "SHIFT") glyph = "⇧";
+          else if (S.kbShift && KB_SHIFTED[label]) glyph = KB_SHIFTED[label];
+          else if (S.kbShift && /^[a-z]$/.test(label)) glyph = label.toUpperCase();
+          scr.appendChild(el("div", {
+            left: x + "px", top: y + "px", width: w + "px", height: keyH + "px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            font: fontCss(Math.round(keyH * 0.5), S.fMenu), color: ink
+          }, glyph));
+        }
+        c += span;
+      }
+    });
+
+    // footer actions
+    var fy = S.kbTop + 4 * cell + inset;
+    [["Reset", 0, 3], ["Space", 3, 7], ["Cancel", 10, 3]].forEach(function (b) {
+      var x = left + b[1] * cell + inset, w = cell * b[2] - S.kbSpacing;
+      scr.appendChild(el("div", {
+        left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
+        background: css("kbKey"), borderRadius: S.kbRadius + "px"
+      }));
+      scr.appendChild(el("div", {
+        left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        font: fontCss(Math.round(keyH * 0.42), S.fMenu), color: css("text")
+      }, b[0]));
+    });
+  }
+
+  function drawMenuFooter(scr) {
+    scr.appendChild(el("div", {
+      left: "0px", top: (SH - 46) + "px", width: SW + "px", textAlign: "center",
+      font: fontCss(S.menuFootFont, S.fMenuFoot), color: css("text"), opacity: ".85"
+    }, "EmulationStation V2.13.0.0 · Build 20260923"));
+  }
+
+  function drawSaver(scr) {
+    var cx = SW / 2;
+    if (S.ssLock && ART.ssLockIcon) {
+      var li = el("img", { left: (cx - 16) + "px", top: "96px", width: "32px", height: "32px", objectFit: "contain" });
+      li.src = ART.ssLockIcon.src; li.alt = "";
+      scr.appendChild(li);
+    } else if (S.ssLock) {
+      scr.appendChild(el("div", {
+        left: "0px", top: "96px", width: SW + "px", textAlign: "center",
+        font: fontCss(26, S.fSaver), color: css("text"), opacity: ".75"
+      }, "🔒"));
+    }
+    scr.appendChild(el("div", {
+      left: "0px", top: (SH / 2 - S.ssClock * 0.72) + "px", width: SW + "px", textAlign: "center",
+      font: fontCss(S.ssClock, S.fSaver), color: css("text"), letterSpacing: "0"
+    }, "04:20"));
+    var sub = S.ssCharge ? "82% Charged" : "Tuesday, 23 September";
+    var subSize = Math.round(S.ssClock * 0.36);
+    var row = el("div", {
+      left: "0px", top: (SH / 2 + S.ssClock * 0.34) + "px", width: SW + "px",
+      display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+      font: fontCss(subSize, S.fSaver), color: css("text")
+    });
+    if (S.ssCharge && ART.ssBattIcon) {
+      var bi = el("img", { position: "relative", width: subSize + "px", height: subSize + "px", objectFit: "contain" });
+      bi.src = ART.ssBattIcon.src; bi.alt = "";
+      row.appendChild(bi);
+    }
+    row.appendChild(el("span", { position: "relative" }, sub));
+    scr.appendChild(row);
+  }
+
+  function drawPopup(scr) {
+    // representative volume / brightness overlay: geometry is engine-side,
+    // the icon and font come from the theme.
+    var w = 360, h = 96, x = (SW - w) / 2, y = (SH - h) / 2;
+    scr.appendChild(el("div", {
+      left: x + "px", top: y + "px", width: w + "px", height: h + "px",
+      background: css("bg"), border: "2px solid " + css("text"), borderRadius: "16px", opacity: ".97"
+    }));
+    var iconBox = 40, pad = 24;
+    if (ART.popVolume) {
+      var vi = el("img", {
+        left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px",
+        width: iconBox + "px", height: iconBox + "px", objectFit: "contain"
+      });
+      vi.src = ART.popVolume.src; vi.alt = "";
+      scr.appendChild(vi);
+    } else {
+      scr.appendChild(el("div", {
+        left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px", width: iconBox + "px",
+        height: iconBox + "px", display: "flex", alignItems: "center", justifyContent: "center",
+        font: fontCss(30, S.fPop), color: css("text")
+      }, "♪"));
+    }
+    var barX = x + pad + iconBox + 18, barW = w - (pad * 2) - iconBox - 18 - 56;
+    scr.appendChild(el("div", {
+      left: barX + "px", top: (y + h / 2 - 7) + "px", width: barW + "px", height: "14px",
+      background: css("text"), opacity: ".25", borderRadius: "7px"
+    }));
+    scr.appendChild(el("div", {
+      left: barX + "px", top: (y + h / 2 - 7) + "px", width: (barW * 0.62) + "px", height: "14px",
+      background: css("text"), borderRadius: "7px"
+    }));
+    scr.appendChild(el("div", {
+      left: (barX + barW + 12) + "px", top: (y + h / 2 - 16) + "px", width: "46px", height: "32px",
+      display: "flex", alignItems: "center", justifyContent: "flex-end",
+      font: fontCss(22, S.fPop), color: css("text")
+    }, "62"));
+  }
+
+  function drawOverlay(scr) {
+    if (!S.ovShow || !ART.overlay) return;
+    var im = el("img", {
+      left: "0px", top: "0px", width: SW + "px", height: SH + "px",
+      objectFit: "fill", opacity: (S.ovOpacity / 100),
+      pointerEvents: "none", imageRendering: S.ovPixel ? "pixelated" : "auto"
+    });
+    im.src = ART.overlay.src; im.alt = "";
+    scr.appendChild(im);
+  }
+
+  function render() {
+    var scr = document.getElementById("screen");
+    scr.innerHTML = "";
+    scr.style.background = css("bg");
+    if (page === "saver") { drawSaver(scr); }
+    else if (page === "keyboard") { drawTopBar(scr); drawKeyboard(scr); }
+    else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawHelp(scr); drawPopup(scr); }
+    else {
+      drawTopBar(scr);
+      if (page === "carousel") drawCarousel(scr);
+      else if (page === "gamelist") drawGamelist(scr);
+      else { drawMenu(scr); drawMenuFooter(scr); }
+      drawHelp(scr);
+    }
+    drawOverlay(scr);
+    fitScreen();
+    renderLegend();
+    renderXML();
+  }
+
+  var CW = 820, CH = 1150;   // wireframe console box
+  function fitScreen() {
+    var box = document.getElementById("console");
+    var avail = box.parentElement.clientWidth - 48;
+    var byWidth = avail / CW;
+    var byHeight = (window.innerHeight - 190) / CH;
+    var z = Math.min(1, Math.max(.3, Math.min(byWidth, byHeight)));
+    box.style.transform = "scale(" + z + ")";
+    box.style.marginBottom = Math.round(CH * (z - 1)) + "px";
+    box.style.marginRight = Math.round(CW * (z - 1)) + "px";
+  }
+
+  function renderLegend() {
+    var pitch = S.carHeight / S.carRows;
+    var parts = page === "carousel"
+      ? ["row pitch <b>" + pitch.toFixed(1) + "px</b>",
+         "pill <b>" + (S.carFit ? "hugs text, max " + S.carPillW : S.carPillW) + "px</b>",
+         "nav <b>" + (S.listScroll ? "list-style" : "centered") + "</b>"]
+      : page === "gamelist"
+        ? ["row pitch <b>" + S.glPitch + "px</b>",
+           "pill <b>" + (S.glFit ? "hugs text, max " + S.glWidth : S.glWidth) + "px</b>",
+           "visible rows <b>" + Math.floor((SH - 48 - 60) / S.glPitch) + "</b>"]
+        : page === "menu"
+          ? ["row pitch <b>38px</b> (engine)", "pill <b>620px</b> (engine)", "font <b>23px</b> (engine)"]
+        : page === "keyboard"
+          ? ["grid <b>" + S.kbWidth + "px</b>", "key <b>" + (S.kbWidth / 13 - S.kbSpacing).toFixed(1) + "px</b>",
+             "flash <b>" + S.kbFlash + "ms</b>"]
+        : page === "saver"
+          ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
+          : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
+    document.getElementById("legend").innerHTML = parts.join(" · ");
+  }
+
+  // ---------- theme.xml ----------
+  function renderXML() {
+    var fontFrac = function (px) { return f(px / (SH * BOOST), 6); };
+    var carSizeY = S.carHeight / SH;
+    var lineSpacing = S.glPitch / glyphBox(S.glFont, S.fGl);
+
+    var x = [];
+    x.push('<?xml version="1.0" encoding="UTF-8"?>');
+    x.push('<!--');
+    x.push('theme name:     My Mono theme');
+    x.push('Built with:     Mono Theme Studio');
+    var used = [];
+    [S.fCar, S.fGl, S.fGlHead, S.fClock, S.fBatt, S.fHelp, S.fMenu, S.fMenuTitle, S.fMenuFoot, S.fSaver, S.fPop]
+      .forEach(function (id) { if (used.indexOf(id) < 0) used.push(id); });
+    x.push('Fonts needed:   ' + used.join(', '));
+    x.push('                (copy these into the theme\'s fonts/ folder)');
+    x.push('-->');
+    x.push('<theme>');
+    x.push('    <formatVersion>7</formatVersion>');
+    x.push('    <feature supported="carousel">');
+    x.push('    <view name="system">');
+    x.push('    <image name="staticBackground">');
+    x.push('\t<path>./art/system.png</path>');
+    x.push('\t<origin>0 0</origin><pos>0 0</pos><size>1 1</size><zIndex>0</zIndex>');
+    x.push('    </image>');
+    x.push('    <sound name="directory"><path>./music/</path></sound>');
+    x.push('    <carousel name="systemcarousel">');
+    x.push('\t<origin>0 0</origin>');
+    x.push('\t<type>vertical</type>');
+    x.push('\t<color>00000000</color>');
+    x.push('\t<logoSize>' + f(S.carIndent * 10 / SW, 6) + ' ' + f(S.carRowH / SH, 6) + '</logoSize><!-- text indent = ' + S.carIndent + 'px, row ' + S.carRowH + 'px -->');
+    x.push('\t<logoScale>1.0</logoScale>');
+    x.push('\t<maxLogoCount>' + S.carRows + '</maxLogoCount>');
+    x.push('\t<logoAlignment>left</logoAlignment>');
+    x.push('\t<pos>0 ' + f(S.carTop / SH, 6) + '</pos><!-- region top ' + S.carTop + 'px -->');
+    x.push('\t<size>1 ' + f(carSizeY, 6) + '</size><!-- ' + S.carHeight + 'px -> pitch ' + (S.carHeight / S.carRows).toFixed(1) + 'px -->');
+    if (S.listScroll) x.push('\t<listScroll>true</listScroll><!-- gamelist-style navigation -->');
+    if (S.carFit) {
+      x.push('\t<selectorFitContent>true</selectorFitContent><!-- pill hugs the selected name -->');
+      x.push('\t<selectorPadding>' + f(S.carPad / SH, 6) + '</selectorPadding><!-- ' + S.carPad + 'px each side -->');
+    }
+    x.push('\t<selectorColor>' + hex8("pill") + 'FF</selectorColor>');
+    if (S.pillGrad) x.push('\t<selectorColorEnd>' + hex8("pillEnd") + 'FF</selectorColorEnd><!-- vertical gradient -->');
+    x.push('\t<selectorWidth>' + f(S.carPillW / SW, 6) + '</selectorWidth><!-- ' + S.carPillW + 'px' + (S.carFit ? ' max in fit mode' : '') + ' -->');
+    x.push('\t<selectorHeight>' + f(S.carPillH / SH, 6) + '</selectorHeight><!-- ' + S.carPillH + 'px -->');
+    x.push('\t<selectorRadius>' + f(S.carRadius / SH, 6) + '</selectorRadius><!-- ' + S.carRadius + 'px -->');
+    x.push('\t<logoColor>' + hex8("text") + 'FF</logoColor>');
+    x.push('\t<logoSelectedColor>' + hex8("pillText") + 'FF</logoSelectedColor>');
+    x.push('\t<scrollSound>./audio/move.wav</scrollSound>');
+    x.push('    </carousel>');
+    x.push('    <text name="logoText">');
+    x.push('\t<fontPath>./fonts/' + S.fCar + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.carFont) + '</fontSize><!-- ' + S.carFont + 'px on screen -->');
+    x.push('\t<lineSpacing>' + f(S.lsCar, 3) + '</lineSpacing>');
+    x.push('\t<forceUppercase>' + (S.uCar ? 'true' : 'false') + '</forceUppercase>');
+    x.push('\t<alignment>left</alignment>');
+    x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('    </text>');
+    x.push('    </view>');
+    x.push('    </feature>');
+    x.push('');
+    ["system", "basic, detailed, video"].forEach(function (view) {
+      x.push('    <view name="' + view + '">');
+      x.push('        <helpsystem name="help">');
+      x.push('\t<fontPath>./fonts/' + S.fHelp + '</fontPath>');
+      x.push('\t<visible>' + (S.helpShow ? 'true' : 'false') + '</visible>');
+      x.push('\t<pos>' + f(S.helpMargin / SW, 6) + ' ' + f((SH - 8 - (S.helpIcon + S.helpPadY * 2) + S.helpPadY) / SH, 6) + '</pos>');
+      x.push('\t<origin>0 0</origin>');
+      x.push('\t<fontSize>' + fontFrac(S.helpFont) + '</fontSize><!-- ' + S.helpFont + 'px -->');
+      x.push('\t<textColor>' + hex8("helpText") + '</textColor>');
+      x.push('\t<iconColor>' + hex8("helpChip") + '</iconColor>');
+      x.push('\t<iconSize>' + f(S.helpIcon / SH, 6) + '</iconSize><!-- ' + S.helpIcon + 'px -->');
+      x.push('\t<iconTextSpacing>0.0125</iconTextSpacing>');
+      x.push('\t<entrySpacing>0.034375</entrySpacing>');
+      x.push('\t<textUppercase>' + (S.uHelp ? 'true' : 'false') + '</textUppercase>');
+      x.push('\t<backgroundColor>' + hex8("helpPill") + 'FF</backgroundColor>');
+      x.push('\t<backgroundWidth>0</backgroundWidth><!-- content-fit pills -->');
+      x.push('\t<backgroundRadius>' + f((S.helpIcon + S.helpPadY * 2) / 2 / SH, 6) + '</backgroundRadius>');
+      x.push('\t<backgroundPadding>' + f(S.helpPadX / SW, 6) + ' ' + f(S.helpPadY / SH, 6) + '</backgroundPadding>');
+      x.push('\t<iconX>' + PATHS.btnX + '</iconX>');
+      x.push('\t<iconY>' + PATHS.btnY + '</iconY>');
+      x.push('\t<iconA>' + PATHS.btnA + '</iconA>');
+      x.push('\t<iconB>' + PATHS.btnB + '</iconB>');
+      x.push('        </helpsystem>');
+      x.push('    </view>');
+    });
+    x.push('');
+    x.push('    <view name="basic, detailed, video">');
+    x.push('    <image name="background" extra="true">');
+    x.push('\t<size>1 1</size><pos>0 0</pos><origin>0 0</origin>');
+    x.push('\t<path>./art/gamelist.png</path><zIndex>0</zIndex>');
+    x.push('    </image>');
+    x.push('    <textlist name="gamelist">');
+    if (S.glFit) x.push('         <selectorFitContent>true</selectorFitContent><!-- pill hugs the game name -->');
+    x.push('         <selectorColor>' + hex8("pill") + '</selectorColor>');
+    if (S.pillGrad) x.push('         <selectorColorEnd>' + hex8("pillEnd") + '</selectorColorEnd>');
+    x.push('         <selectedColor>' + hex8("pillText") + '</selectedColor>');
+    x.push('         <primaryColor>' + hex8("text") + '</primaryColor>');
+    x.push('         <secondaryColor>' + hex8("text") + '</secondaryColor>');
+    x.push('         <fontPath>./fonts/' + S.fGl + '</fontPath>');
+    x.push('         <fontSize>' + fontFrac(S.glFont) + '</fontSize><!-- ' + S.glFont + 'px -->');
+    x.push('         <forceUppercase>' + (S.uGl ? '1' : '0') + '</forceUppercase>');
+    x.push('         <pos>' + f(S.glLeft / SW, 6) + ' ' + f(S.glTop / SH, 6) + '</pos>');
+    x.push('         <size>' + f(S.glWidth / SW, 6) + ' 0.7875</size><!-- ' + S.glWidth + 'px wide -->');
+    x.push('         <alignment>left</alignment>');
+    x.push('         <horizontalMargin>' + f(S.glInset / SW, 6) + '</horizontalMargin><!-- ' + S.glInset + 'px text inset -->');
+    x.push('         <origin>0 0</origin>');
+    x.push('         <lineSpacing>' + f(lineSpacing, 3) + '</lineSpacing><!-- row pitch ~' + S.glPitch + 'px -->');
+    x.push('         <selectorOffsetY>-0.0020833</selectorOffsetY>');
+    x.push('         <selectorHeight>' + f(S.glPillH / SH, 6) + '</selectorHeight><!-- ' + S.glPillH + 'px -->');
+    x.push('         <selectorRadius>' + f(S.glRadius / SH, 6) + '</selectorRadius><!-- ' + S.glRadius + 'px -->');
+    x.push('\t<scrollSound>./audio/move.wav</scrollSound>');
+    x.push('    </textlist>');
+    if (ART.overlay || S.ovShow) {
+      x.push('    <image name="screenOverlay" extra="true"><!-- drawn above the list -->');
+      x.push('\t<path>' + PATHS.overlay + '</path>');
+      x.push('\t<pos>0 0</pos><size>1 1</size><origin>0 0</origin>');
+      x.push('\t<zIndex>60</zIndex>');
+      x.push('    </image>');
+    }
+    x.push('    <text name="logoText">');
+    x.push('         <forceUppercase>' + (S.uGlHead ? '1' : '0') + '</forceUppercase>');
+    x.push('         <size>0.96 0.05</size><pos>0.02 0.025</pos>');
+    x.push('         <alignment>center</alignment>');
+    x.push('         <color>' + hex8("text") + '</color>');
+    x.push('         <fontPath>./fonts/' + S.fGlHead + '</fontPath>');
+    x.push('         <fontSize>' + fontFrac(S.glHeader) + '</fontSize><!-- ' + S.glHeader + 'px -->');
+    x.push('         <zIndex>2</zIndex>');
+    x.push('    </text>');
+    x.push('    </view>');
+    x.push('');
+    x.push('    <view name="menu">');
+    x.push('    <menuBackground name="menubg"><path>./art/menu.png</path></menuBackground>');
+    x.push('    <menuArrow name="menuarrow">');
+    x.push('\t<path>' + PATHS.arrow + '</path><optionPath>' + PATHS.arrow + '</optionPath>');
+    x.push('    </menuArrow>');
+    x.push('    <menuText name="menutext">');
+    x.push('\t<fontPath>./fonts/' + S.fMenu + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.menuFont) + '</fontSize><!-- ' + S.menuFont + 'px -->');
+    x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('\t<selectorColor>' + hex8("pill") + '</selectorColor>');
+    if (S.pillGrad) x.push('\t<selectorColorEnd>' + hex8("pillEnd") + '</selectorColorEnd>');
+    x.push('\t<selectedColor>' + hex8("pillText") + '</selectedColor>');
+    x.push('\t<selectorRadius>0.0375</selectorRadius>');
+    x.push('\t<separatorColor>00000000</separatorColor>');
+    x.push('    </menuText>');
+    x.push('    <menuText name="menutitle">');
+    x.push('\t<fontPath>./fonts/' + S.fMenuTitle + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.menuTitleFont) + '</fontSize><!-- ' + S.menuTitleFont + 'px -->');
+    x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('    </menuText>');
+    x.push('    <menuText name="menufooter">');
+    x.push('\t<fontPath>./fonts/' + S.fMenuFoot + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.menuFootFont) + '</fontSize><!-- ' + S.menuFootFont + 'px -->');
+    x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('    </menuText>');
+    x.push('    </view>');
+    x.push('');
+    x.push('    <view name="screen">');
+    x.push('         <text name="clock">');
+    x.push('\t     <fontPath>./fonts/' + S.fClock + '</fontPath>');
+    x.push('\t     <color>' + hex8("text") + '</color>');
+    x.push('         <fontSize>' + fontFrac(S.barFont) + '</fontSize>');
+    x.push('         <pos>' + f(24 / SW, 6) + ' 0.0166667</pos>');
+    x.push('         <size>0.4 0.0666667</size>');
+    x.push('         <alignment>left</alignment><verticalAlignment>center</verticalAlignment>');
+    x.push('    </text>');
+    x.push('\t<batteryIndicator name="batteryIndicator">');
+    x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('\t<pos>0 0.0166667</pos><size>0.96875 0.0666667</size>');
+    x.push('\t<horizontalAlignment>right</horizontalAlignment>');
+    x.push('\t<fontPath>./fonts/' + S.fBatt + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.barFont) + '</fontSize>');
+    x.push('\t<itemSpacing>0.009375</itemSpacing>');
+    x.push('\t<incharge>./art/battery/battery-charging.svg</incharge>');
+    x.push('\t<full>' + PATHS.battery + '</full>');
+    x.push('\t<at75>./art/battery/battery-75.svg</at75>');
+    x.push('\t<at50>./art/battery/battery-50.svg</at50>');
+    x.push('\t<at25>./art/battery/battery-25.svg</at25>');
+    x.push('\t<empty>./art/battery/battery-0.svg</empty>');
+    x.push('    </batteryIndicator>');
+    x.push('');
+    x.push('\t<keyboard name="keyboard">');
+    x.push('\t<backspace>' + PATHS.kbBackspace + '</backspace>');
+    x.push('\t<enter>' + PATHS.kbEnter + '</enter>');
+    x.push('\t<shift>' + PATHS.kbShiftIcon + '</shift>');
+    x.push('\t<shiftActive>' + PATHS.kbShiftOn + '</shiftActive>');
+    x.push('\t<iconSize>' + f(S.kbIcon / SH, 6) + '</iconSize><!-- ' + S.kbIcon + 'px -->');
+    x.push('\t<width>' + f(S.kbWidth / SW, 6) + '</width><!-- ' + S.kbWidth + 'px grid -->');
+    x.push('\t<posY>' + f(S.kbTop / SH, 6) + '</posY><!-- grid top ' + S.kbTop + 'px -->');
+    x.push('\t<keySpacing>' + f(S.kbSpacing / SW, 6) + '</keySpacing><!-- ' + S.kbSpacing + 'px gap -->');
+    x.push('\t<keyRadius>' + f(S.kbRadius / SH, 6) + '</keyRadius><!-- ' + S.kbRadius + 'px -->');
+    x.push('\t<keyColor>' + hex(css("kbKey")) + 'FF</keyColor>');
+    x.push('\t<keyPressColor>' + hex(css("kbPress")) + 'FF</keyPressColor>');
+    x.push('\t<keyPressMs>' + S.kbFlash + '</keyPressMs>');
+    x.push('    </keyboard>');
+    x.push('');
+    x.push('\t<volumeIndicator name="volumeIndicator">');
+    x.push('\t<icon>' + PATHS.popVolume + '</icon>');
+    x.push('\t<fontPath>./fonts/' + S.fPop + '</fontPath>');
+    x.push('    </volumeIndicator>');
+    x.push('\t<brightnessIndicator name="brightnessIndicator">');
+    x.push('\t<icon>' + PATHS.popBright + '</icon>');
+    x.push('\t<fontPath>./fonts/' + S.fPop + '</fontPath>');
+    x.push('    </brightnessIndicator>');
+    x.push('');
+    x.push('\t<text name="screensaverClock">');
+    x.push('\t<fontPath>./fonts/' + S.fSaver + '</fontPath>');
+    x.push('\t<fontSize>' + fontFrac(S.ssClock) + '</fontSize><!-- ' + S.ssClock + 'px; date renders at 36% -->');
+    x.push('    </text>');
+    x.push('\t<image name="screensaverBattery"><path>' + PATHS.ssBattIcon + '</path></image>');
+    x.push('\t<image name="screensaverLock"><path>' + PATHS.ssLockIcon + '</path></image>');
+    x.push('    </view>');
+    x.push('</theme>');
+
+    document.getElementById("xml").textContent = x.join("\n");
+  }
+
+  // ---------- controls ----------
+  function artFields(keys) {
+    return keys.map(function (k) {
+      var def = ICONS.filter(function (i) { return i.k === k; })[0];
+      return { k: k, t: "art", label: def.label };
+    });
+  }
+  var ART_NOTE = { t: "note", label: "Load an SVG or PNG to preview it here, then copy that file into the theme's art folder under the path shown. The engine tints these to the colours above." };
+
+  var GENERAL = [
+    { name: "Palette", open: true, fields: [
+      { k: "bg", t: "color", label: "Background" },
+      { k: "text", t: "color", label: "Text" },
+      { k: "pill", t: "color", label: "Selection pill" },
+      { k: "pillGrad", t: "bool", label: "Gradient pill", hint: "Fades from the pill colour to the second colour, top to bottom." },
+      { k: "pillEnd", t: "color", label: "Pill gradient end" },
+      { k: "pillText", t: "color", label: "Text on pill" },
+      { k: "helpPill", t: "color", label: "Hint bar pill" },
+      { k: "helpText", t: "color", label: "Hint bar text" },
+      { k: "helpChip", t: "color", label: "Button circles" }
+    ]},
+    { name: "Fonts", open: true, fields: [
+      { t: "library" },
+      { t: "note", label: "Each text layer points at a font file, so weight comes from the file you choose. Copy the files you use into the theme's fonts folder." }
+    ]},
+    { name: "Typography — every layer", open: true, fields: [
+      { k: "fClock", t: "font", label: "Clock" },
+      { k: "fBatt", t: "font", label: "Battery %" },
+      { k: "fCar", t: "font", label: "Carousel names" },
+      { k: "fGl", t: "font", label: "Game names" },
+      { k: "fGlHead", t: "font", label: "System title" },
+      { k: "fHelp", t: "font", label: "Hint bar labels" },
+      { k: "fMenu", t: "font", label: "Menu rows + keys" },
+      { k: "fMenuTitle", t: "font", label: "Menu / popup title" },
+      { k: "fMenuFoot", t: "font", label: "Menu footer" },
+      { k: "fSaver", t: "font", label: "Screensaver clock" },
+      { k: "fPop", t: "font", label: "Volume / brightness" },
+      { t: "note", label: "The same pickers also sit with their own screens; this is the overview when you want to see every assignment at once." }
+    ]},
+    { name: "Screen overlay", fields: artFields(["overlay"]).concat([
+      { k: "ovShow", t: "bool", label: "Show overlay" },
+      { k: "ovOpacity", t: "num", label: "Opacity", min: 0, max: 100, step: 1, unit: "%" },
+      { k: "ovPixel", t: "bool", label: "Pixelated scaling", hint: "Keeps a small grid or scanline PNG crisp instead of blurring it." },
+      { t: "note", label: "A full-screen PNG over the whole interface — scanlines, an LCD grid, a dot matrix. Exported as an extra image with a high zIndex, which this build draws above the list." }
+    ]) },
+    { name: "Top bar", fields: [
+      { k: "barFont", t: "num", label: "Clock / battery size", min: 12, max: 32, step: 1, unit: "px" },
+      { k: "fClock", t: "font", label: "Clock font" },
+      { k: "fBatt", t: "font", label: "Battery font" }
+    ].concat(artFields(["battery"])) },
+    { name: "Hint bar", fields: [
+      { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
+      { k: "helpFont", t: "num", label: "Label size", min: 12, max: 30, step: 1, unit: "px" },
+      { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px" },
+      { k: "helpPadX", t: "num", label: "Pill padding X", min: 0, max: 30, step: 1, unit: "px" },
+      { k: "helpPadY", t: "num", label: "Pill padding Y", min: 0, max: 20, step: 1, unit: "px" },
+      { k: "helpMargin", t: "num", label: "Side margin", min: 0, max: 60, step: 1, unit: "px" },
+      { k: "fHelp", t: "font", label: "Label font" },
+      { k: "uHelp", t: "bool", label: "Uppercase labels" }
+    ].concat(artFields(["btnX", "btnY", "btnA", "btnB"])) }
+  ];
+
+  var PAGE_GROUPS = {
+    carousel: [{ name: "Carousel", open: true, fields: [
+      { k: "listScroll", t: "bool", label: "List-style navigation", hint: "Selection walks the rows and the list scrolls, like a gamelist." },
+      { k: "carFit", t: "bool", label: "Pill hugs the name" },
+      { k: "carRows", t: "num", label: "Visible rows", min: 3, max: 9, step: 1 },
+      { k: "carTop", t: "num", label: "Region top", min: 0, max: 120, step: 1, unit: "px" },
+      { k: "carHeight", t: "num", label: "Region height", min: 200, max: 440, step: 2, unit: "px" },
+      { k: "carRowH", t: "num", label: "Row height", min: 40, max: 110, step: 1, unit: "px" },
+      { k: "carPillH", t: "num", label: "Pill height", min: 30, max: 110, step: 1, unit: "px" },
+      { k: "carRadius", t: "num", label: "Pill radius", min: 0, max: 55, step: 1, unit: "px" },
+      { k: "carPillW", t: "num", label: "Pill width / max", min: 200, max: 640, step: 2, unit: "px" },
+      { k: "carPad", t: "num", label: "Hug padding", min: 4, max: 60, step: 1, unit: "px" },
+      { k: "carIndent", t: "num", label: "Text indent", min: 0, max: 120, step: 1, unit: "px" },
+      { k: "carFont", t: "num", label: "Name size", min: 18, max: 60, step: 1, unit: "px" },
+      { k: "fCar", t: "font", label: "Name font" },
+      { k: "uCar", t: "bool", label: "Uppercase names" },
+      { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 }
+    ]}],
+    gamelist: [{ name: "Gamelist", open: true, fields: [
+      { k: "glFit", t: "bool", label: "Pill hugs the name" },
+      { k: "glTop", t: "num", label: "List top", min: 44, max: 140, step: 1, unit: "px" },
+      { k: "glLeft", t: "num", label: "List left", min: 0, max: 60, step: 1, unit: "px" },
+      { k: "glWidth", t: "num", label: "List width / max pill", min: 300, max: 640, step: 2, unit: "px" },
+      { k: "glFont", t: "num", label: "Game name size", min: 14, max: 48, step: 1, unit: "px" },
+      { k: "glPitch", t: "num", label: "Row pitch", min: 24, max: 80, step: 1, unit: "px" },
+      { k: "glPillH", t: "num", label: "Pill height", min: 20, max: 76, step: 1, unit: "px" },
+      { k: "glRadius", t: "num", label: "Pill radius", min: 0, max: 38, step: 1, unit: "px" },
+      { k: "glInset", t: "num", label: "Text inset", min: 4, max: 48, step: 1, unit: "px" },
+      { k: "glHeader", t: "num", label: "System title size", min: 12, max: 32, step: 1, unit: "px" },
+      { k: "fGl", t: "font", label: "Game name font" },
+      { k: "uGl", t: "bool", label: "Uppercase game names" },
+      { k: "fGlHead", t: "font", label: "System title font" },
+      { k: "uGlHead", t: "bool", label: "Uppercase system title" }
+    ]}],
+    menu: [{ name: "Menu", open: true, fields: [
+      { k: "menuFont", t: "num", label: "Row size", min: 14, max: 32, step: 1, unit: "px" },
+      { k: "fMenu", t: "font", label: "Row font" },
+      { k: "menuTitleFont", t: "num", label: "Title size", min: 12, max: 32, step: 1, unit: "px" },
+      { k: "fMenuTitle", t: "font", label: "Title font" },
+      { k: "menuFootFont", t: "num", label: "Footer size", min: 10, max: 28, step: 1, unit: "px" },
+      { k: "fMenuFoot", t: "font", label: "Footer font" }
+    ].concat(artFields(["arrow"])).concat([
+      { t: "note", label: "Row pitch and pill width come from the build (38px / 620px); the fonts and colours above are yours." }
+    ]) }],
+    keyboard: [
+      { name: "Keyboard", open: true, fields: [
+        { k: "kbKey", t: "color", label: "Key fill" },
+        { k: "kbPress", t: "color", label: "Key press flash", hint: "Keys flash this colour when pressed." },
+        { k: "kbFlash", t: "num", label: "Flash duration", min: 40, max: 400, step: 10, unit: "ms" },
+        { k: "kbWidth", t: "num", label: "Grid width", min: 400, max: 640, step: 2, unit: "px" },
+        { k: "kbTop", t: "num", label: "Grid top", min: 60, max: 220, step: 2, unit: "px" },
+        { k: "kbSpacing", t: "num", label: "Gap between keys", min: 0, max: 16, step: 1, unit: "px" },
+        { k: "kbRadius", t: "num", label: "Key radius", min: 0, max: 22, step: 1, unit: "px" },
+        { k: "kbIcon", t: "num", label: "Key icon size", min: 12, max: 40, step: 1, unit: "px" },
+        { t: "note", label: "Key letters use the menu row font — change it on the Menu screen." }
+      ]},
+      { name: "Key icons", fields: artFields(["kbBackspace", "kbEnter", "kbShiftIcon", "kbShiftOn"]).concat([ART_NOTE]) }
+    ],
+    saver: [
+      { name: "Screensaver", open: true, fields: [
+        { k: "ssClock", t: "num", label: "Clock size", min: 40, max: 180, step: 2, unit: "px" },
+        { k: "ssLock", t: "bool", label: "Show lock icon", hint: "The clock locks every button except Select." },
+        { k: "ssCharge", t: "bool", label: "Preview charging state", hint: "While charging, the date line becomes battery + charge %." },
+        { k: "fSaver", t: "font", label: "Clock font" }
+      ]},
+      { name: "Screensaver icons", fields: artFields(["ssLockIcon", "ssBattIcon"]) }
+    ],
+    popup: [{ name: "Pop-up", open: true, fields: [
+      { k: "fPop", t: "font", label: "Value font" }
+    ].concat(artFields(["popVolume", "popBright"])).concat([
+      { t: "note", label: "Volume and brightness overlays take their icon and font from the theme; the box size and position come from the build." }
+    ]) }]
+  };
+
+  var PAGE_NAME = { carousel: "Carousel", gamelist: "Gamelist", menu: "Menu",
+    keyboard: "Keyboard", saver: "Screensaver", popup: "Pop-up" };
+  var railMode = "screen";
+
+  function buildRail() {
+    var rail = document.getElementById("rail");
+    rail.innerHTML = "";
+    var head = el("div"); head.className = "railtabs";
+    [["screen", PAGE_NAME[page]], ["general", "General"]].forEach(function (m) {
+      var b = el("button", null, m[1]);
+      b.className = "btn" + (railMode === m[0] ? " on" : "");
+      b.addEventListener("click", function () { railMode = m[0]; buildRail(); });
+      head.appendChild(b);
+    });
+    rail.appendChild(head);
+    var groups = railMode === "general" ? GENERAL : (PAGE_GROUPS[page] || []);
+    groups.forEach(function (g) {
+      var d = el("details", null); d.className = "group"; if (g.open) d.open = true;
+      var sum = el("summary", null, g.name); d.appendChild(sum);
+      var box = el("div"); box.className = "fields";
+      g.fields.forEach(function (fd) { box.appendChild(buildField(fd)); });
+      d.appendChild(box); rail.appendChild(d);
+    });
+  }
+
+  function buildField(fd) {
+    var wrap = el("div"); wrap.className = "field" + (fd.t === "num" || fd.t === "art" ? " slider" : "");
+    if (fd.t === "note") {
+      var n = el("div", null, fd.label); n.className = "hint"; n.style.marginTop = "2px";
+      wrap.appendChild(n);
+      return wrap;
+    }
+    if (fd.t === "font") {
+      wrap.className = "field";
+      wrap.appendChild(el("label", null, fd.label));
+      var sel = document.createElement("select");
+      sel.style.cssText = "max-width:170px;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);";
+      FONT_LIB.forEach(function (e) {
+        var o = document.createElement("option");
+        o.value = e.id; o.textContent = e.label;
+        if (S[fd.k] === e.id) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", function () { S[fd.k] = sel.value; render(); });
+      wrap.appendChild(sel);
+      return wrap;
+    }
+    if (fd.t === "library") {
+      var list = el("div", { display: "flex", flexDirection: "column", gap: "4px" });
+      FONT_LIB.forEach(function (e) {
+        var row = el("div", { display: "flex", justifyContent: "space-between", gap: "8px" });
+        row.appendChild(el("span", { fontSize: "12px" }, e.label));
+        var tag = el("span", null, e.id); tag.className = "val";
+        tag.style.cssText += ";overflow:hidden;text-overflow:ellipsis;max-width:150px;white-space:nowrap;";
+        row.appendChild(tag);
+        list.appendChild(row);
+      });
+      var pickF = el("label"); pickF.className = "btn"; pickF.style.cssText = "cursor:pointer;margin-top:6px;text-align:center;";
+      pickF.textContent = "Load a font file…";
+      var fin = el("input"); fin.type = "file"; fin.accept = ".ttf,.otf,font/ttf,font/otf"; fin.style.display = "none";
+      fin.addEventListener("change", function () {
+        var file = fin.files && fin.files[0]; if (!file) return;
+        var rd = new FileReader();
+        rd.onload = function () {
+          var entry = { id: file.name, label: file.name.replace(/\.(ttf|otf)$/i, ""), src: rd.result, fam: "F_u" + (++fontSeq) };
+          FONT_LIB.push(entry);
+          registerFont(entry).then(function () { buildRail(); render(); toast(entry.label + " added"); });
+        };
+        rd.readAsDataURL(file);
+      });
+      pickF.appendChild(fin);
+      wrap.className = "field slider";
+      wrap.appendChild(list); wrap.appendChild(pickF);
+      return wrap;
+    }
+    if (fd.t === "art") {
+      var top0 = el("div"); top0.className = "top";
+      top0.appendChild(el("label", null, fd.label));
+      var status = el("span", null, ART[fd.k] ? ART[fd.k].name : "default");
+      status.className = "val";
+      top0.appendChild(status);
+      var row0 = el("div"); row0.className = "row"; row0.style.gap = "6px";
+      var pick = el("label"); pick.className = "btn"; pick.style.cursor = "pointer";
+      pick.textContent = "Load…";
+      var fi = el("input"); fi.type = "file"; fi.accept = ".svg,.png,image/svg+xml,image/png";
+      fi.style.display = "none";
+      fi.addEventListener("change", function () {
+        var file = fi.files && fi.files[0];
+        if (!file) return;
+        var rd = new FileReader();
+        rd.onload = function () {
+          ART[fd.k] = { src: rd.result, name: file.name };
+          status.textContent = file.name;
+          clear.style.display = "";
+          render();
+        };
+        rd.readAsDataURL(file);
+      });
+      pick.appendChild(fi);
+      var clear = el("button", null, "Reset"); clear.className = "btn";
+      clear.style.display = ART[fd.k] ? "" : "none";
+      clear.addEventListener("click", function () {
+        delete ART[fd.k]; status.textContent = "default"; clear.style.display = "none"; render();
+      });
+      var pathIn = el("input"); pathIn.type = "text"; pathIn.value = PATHS[fd.k];
+      pathIn.style.cssText = "flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);";
+      pathIn.addEventListener("change", function () { PATHS[fd.k] = pathIn.value.trim() || PATHS[fd.k]; renderXML(); });
+      row0.appendChild(pick); row0.appendChild(clear);
+      wrap.appendChild(top0); wrap.appendChild(row0);
+      var row1 = el("div"); row1.className = "row"; row1.style.marginTop = "4px";
+      row1.appendChild(pathIn);
+      wrap.appendChild(row1);
+      return wrap;
+    }
+    if (fd.t === "color") {
+      wrap.appendChild(el("label", null, fd.label));
+      var row = el("div"); row.className = "row";
+      var sw = el("input"); sw.type = "color"; sw.value = S[fd.k];
+      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.value = S[fd.k];
+      sw.addEventListener("input", function () { S[fd.k] = sw.value.toUpperCase(); tx.value = S[fd.k]; render(); });
+      tx.addEventListener("change", function () {
+        var v = tx.value.trim(); if (v[0] !== "#") v = "#" + v;
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) { S[fd.k] = v.toUpperCase(); sw.value = S[fd.k]; render(); }
+        else { tx.value = S[fd.k]; }
+      });
+      row.appendChild(sw); row.appendChild(tx); wrap.appendChild(row);
+      if (S[fd.k + "A"] != null) {
+        var arow = el("div", { gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" });
+        var alab = el("span", null, "opacity"); alab.className = "val";
+        var aval = el("span", null, S[fd.k + "A"] + "%"); aval.className = "val";
+        var ar = el("input"); ar.type = "range"; ar.min = 0; ar.max = 100; ar.step = 1;
+        ar.value = S[fd.k + "A"]; ar.style.flex = "1";
+        ar.addEventListener("input", function () {
+          S[fd.k + "A"] = parseFloat(ar.value); aval.textContent = S[fd.k + "A"] + "%"; render();
+        });
+        arow.appendChild(alab); arow.appendChild(ar); arow.appendChild(aval);
+        wrap.appendChild(arow);
+      }
+    } else if (fd.t === "bool") {
+      var lab = el("label", null, fd.label);
+      var sw2 = el("label"); sw2.className = "switch";
+      var cb = el("input"); cb.type = "checkbox"; cb.checked = !!S[fd.k];
+      cb.addEventListener("change", function () { S[fd.k] = cb.checked; render(); });
+      sw2.appendChild(cb);
+      wrap.appendChild(lab); wrap.appendChild(sw2);
+      if (fd.hint) { var h = el("div", null, fd.hint); h.className = "hint"; wrap.appendChild(h); }
+    } else {
+      var top = el("div"); top.className = "top";
+      top.appendChild(el("label", null, fd.label));
+      var v = el("span", null, S[fd.k] + (fd.unit || "")); v.className = "val";
+      top.appendChild(v);
+      var r = el("input"); r.type = "range"; r.min = fd.min; r.max = fd.max; r.step = fd.step; r.value = S[fd.k];
+      r.addEventListener("input", function () {
+        S[fd.k] = parseFloat(r.value); v.textContent = S[fd.k] + (fd.unit || ""); render();
+      });
+      wrap.appendChild(top); wrap.appendChild(r);
+    }
+    return wrap;
+  }
+
+  function buildTabs() {
+    var tabs = document.getElementById("tabs");
+    tabs.innerHTML = "";
+    [["carousel", "Carousel"], ["gamelist", "Gamelist"], ["menu", "Menu"],
+     ["keyboard", "Keyboard"], ["saver", "Screensaver"], ["popup", "Pop-up"]].forEach(function (t) {
+      var b = el("button", null, t[1]); b.className = "btn" + (page === t[0] ? " on" : "");
+      b.addEventListener("click", function () { page = t[0]; buildTabs(); buildRail(); render(); });
+      tabs.appendChild(b);
+    });
+    if (page === "keyboard") {
+      var kbNav = el("div", { display: "flex", gap: "6px", marginLeft: "12px" });
+      var sh = el("button", null, S.kbShift ? "Shift on" : "Shift off");
+      sh.className = "btn" + (S.kbShift ? " on" : "");
+      sh.addEventListener("click", function () { S.kbShift = !S.kbShift; buildTabs(); render(); });
+      var pr = el("button", null, kbPressed ? "Press held" : "Show press");
+      pr.className = "btn" + (kbPressed ? " on" : "");
+      pr.addEventListener("click", function () { kbPressed = !kbPressed; buildTabs(); render(); });
+      kbNav.appendChild(sh); kbNav.appendChild(pr);
+      tabs.appendChild(kbNav);
+      return;
+    }
+    if (page === "saver" || page === "popup") return;
+    var nav = el("div", { display: "flex", gap: "6px", marginLeft: "12px" });
+    var up = el("button", null, "▲"); up.className = "btn"; up.title = "Move selection up";
+    var dn = el("button", null, "▼"); dn.className = "btn"; dn.title = "Move selection down";
+    up.addEventListener("click", function () { move(-1); });
+    dn.addEventListener("click", function () { move(1); });
+    nav.appendChild(up); nav.appendChild(dn);
+    tabs.appendChild(nav);
+  }
+
+  function move(d) {
+    if (page === "carousel") cursor = Math.min(Math.max(cursor + d, 0), SYSTEMS.length - 1);
+    else if (page === "gamelist") glCursor = Math.min(Math.max(glCursor + d, 0), 6);
+    render();
+  }
+
+  function buildPresets() {
+    var box = document.getElementById("presets");
+    box.innerHTML = "";
+    Object.keys(PRESETS).forEach(function (name) {
+      var b = el("button", null, name); b.className = "btn";
+      b.addEventListener("click", function () {
+        S = Object.assign({}, PRESETS[name]);
+        buildRail(); render(); toast(name + " loaded");
+      });
+      box.appendChild(b);
+    });
+  }
+
+  document.getElementById("copy").addEventListener("click", function () {
+    navigator.clipboard.writeText(document.getElementById("xml").textContent)
+      .then(function () { toast("theme.xml copied"); })
+      .catch(function () { toast("Copy blocked — select the text instead"); });
+  });
+  document.getElementById("download").addEventListener("click", function () {
+    var blob = new Blob([document.getElementById("xml").textContent], { type: "text/xml" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "theme.xml"; a.click();
+    URL.revokeObjectURL(a.href); toast("theme.xml downloaded");
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.target.matches("input, textarea")) return;
+    if (e.key === "ArrowUp") { move(-1); e.preventDefault(); }
+    if (e.key === "ArrowDown") { move(1); e.preventDefault(); }
+  });
+  window.addEventListener("resize", fitScreen);
+
+  if (/general/i.test(location.hash)) railMode = "general";
+  buildPresets(); buildRail(); buildTabs(); render();
+  // register the bundled faces, then redraw so measurements use real metrics
+  Promise.all(FONT_LIB.map(registerFont)).then(function () { render(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
