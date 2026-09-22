@@ -54,6 +54,16 @@ The five **Mono** themes load as presets, so you can start from one and adjust.
 
 ![The general settings panel](docs/screenshot-general.png)
 
+## Stock ES or this build
+
+A switch in the header decides which engine the preview and the export target.
+**Stock ES** dims unselected entries, enlarges the selected one by `logoScale`,
+draws the help prompts the views emit (a theme cannot drop any) with no pill,
+leaves the battery in the UI font, and writes a `theme.xml` with none of this
+build's own properties. **This build** turns on the additions: selection pills,
+gradients, fit-content pills, list navigation, keyboard styling and the
+screensaver clock. Importing a theme picks the right side for you.
+
 ## Opening an existing theme
 
 **Import .zip** or **Import folder** reads a theme you already have: its colours,

@@ -247,6 +247,7 @@
     <span>R36S · 640×480 · live theme.xml</span>
   </div>
   <div class="presets" id="presets"></div>
+  <div class="presets" id="engine"></div>
   <div class="presets" id="io"></div>
 </header>
 
@@ -419,7 +420,7 @@
     clockX: 24, clockY: 8, clockSize: 20,
     battRight: 20, battY: 8, battSize: 20, battGap: 6,
     logoTint: true, helpPillOn: true, stockFade: false, stockPrompts: false,
-    logoScale: 1, stockBatteryFont: false,
+    logoScale: 1, stockBatteryFont: false, engine: "custom",
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
@@ -600,6 +601,8 @@
 
 
   var SYSTEM_LOGOS = [];   // [{ id, src }] read from the theme's own system folders
+  var SYSTEM_EXTRAS = [];  // [{ id, src, name }] per-system extra art (console shots)
+  var EXTRA_GEO = null;    // where the root theme places that extra
   function loadSystemLogos(files, rootDir) {
     var esc = rootDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     var re = new RegExp("^" + esc + "/([^/]+)/theme\\.xml$", "i");
@@ -612,20 +615,32 @@
     return Promise.all(found.map(function (f) {
       return Promise.resolve(files[f.path]()).then(function (bytes) {
         var d = parseThemeXml(new TextDecoder().decode(bytes));
-        var imgs = d.getElementsByTagName("image"), ref = null;
+        var imgs = d.getElementsByTagName("image"), ref = null, extraRef = null, extraName = null;
         for (var i = 0; i < imgs.length; i++) {
-          if (imgs[i].getAttribute("name") === "logo") {
-            var pe = imgs[i].getElementsByTagName("path");
-            if (pe.length) { ref = pe[0].textContent.trim(); break; }
+          var nm = imgs[i].getAttribute("name");
+          var pe = imgs[i].getElementsByTagName("path");
+          if (!pe.length) continue;
+          if (nm === "logo" && !ref) ref = pe[0].textContent.trim();
+          else if (imgs[i].getAttribute("extra") === "true" && !extraRef) {
+            extraRef = pe[0].textContent.trim(); extraName = nm;
           }
         }
-        if (!ref) return null;
         var dir = f.path.slice(0, f.path.lastIndexOf("/"));
-        var rp = resolve(files, dir, ref);
-        if (!rp) return null;
-        return Promise.resolve(files[rp]()).then(function (b2) {
-          return { id: f.id, src: bytesToDataURL(b2, mimeOf(rp)) };
-        });
+        var out = { id: f.id, src: null, extra: null, extraName: extraName };
+        var work = [];
+        if (ref) {
+          var rp = resolve(files, dir, ref);
+          if (rp) work.push(Promise.resolve(files[rp]()).then(function (b2) {
+            out.src = bytesToDataURL(b2, mimeOf(rp));
+          }));
+        }
+        if (extraRef) {
+          var xp = resolve(files, dir, extraRef);
+          if (xp) work.push(Promise.resolve(files[xp]()).then(function (b3) {
+            out.extra = bytesToDataURL(b3, mimeOf(xp));
+          }));
+        }
+        return Promise.all(work).then(function () { return (out.src || out.extra) ? out : null; });
       }).catch(function () { return null; });
     })).then(function (list) { return list.filter(Boolean); });
   }
@@ -699,7 +714,7 @@
 
   function applyDoc(doc, files, baseDir) {
     clamped = [];
-    SYSTEM_LOGOS = [];
+    SYSTEM_LOGOS = []; SYSTEM_EXTRAS = []; EXTRA_GEO = null;
     var r = makeReader(doc, baseDir);
     var jobs = [];
 
@@ -743,9 +758,7 @@
       col(r.colour("system", "text", "logoText", "color"), "text");
     }
     var helpBg = r.colour("system", "helpsystem", null, "backgroundColor");
-    S.helpPillOn = !!helpBg;      // stock ES draws no pill behind the hints
-    S.stockFade = true;           // stock dims the unselected entries
-    S.stockPrompts = true;        // and its views decide which buttons show
+    S.helpPillOn = !!helpBg;
     if (helpBg) col(helpBg, "helpPill");
     col(r.colour("system", "helpsystem", null, "textColor"), "helpText");
     col(r.colour("system", "helpsystem", null, "iconColor"), "helpChip");
@@ -918,10 +931,27 @@
     }
 
     jobs.push(loadSystemLogos(files, baseDir).then(function (list) {
-      if (list.length) { SYSTEM_LOGOS = list; S.carLogos = true; }
+      var withLogo = list.filter(function (e) { return e.src; });
+      if (withLogo.length) { SYSTEM_LOGOS = withLogo; S.carLogos = true; }
+      SYSTEM_EXTRAS = list.filter(function (e) { return e.extra; });
+      if (SYSTEM_EXTRAS.length) {
+        var nm = SYSTEM_EXTRAS[0].extraName;
+        var pos = r.pair("system", "image", nm, "pos") || [0, 0];
+        var size = r.pair("system", "image", nm, "size") ||
+                   r.pair("system", "image", nm, "maxSize") || [1, 1];
+        var fit = r.pair("system", "image", nm, "size") ? "fill" : "contain";
+        EXTRA_GEO = { x: pos[0] * SW, y: pos[1] * SH, w: size[0] * SW, h: size[1] * SH, fit: fit };
+      } else EXTRA_GEO = null;
     }));
 
     return Promise.all(jobs).then(function () {
+      // a theme using this build's properties is previewed on this build
+      var usesExtensions = !!(r.el("screen", "keyboard", null) ||
+        r.prop("system", "carousel", null, "selectorColor") ||
+        r.prop("system", "carousel", null, "listScroll") ||
+        r.el("screen", "text", "screensaverClock"));
+      applyEngine(usesExtensions ? "custom" : "stock", true);
+
       var untouched = [];
       if (!r.el("screen", "keyboard", null)) untouched.push("keyboard");
       if (!r.el("screen", "text", "screensaverClock")) untouched.push("screensaver");
@@ -1023,6 +1053,24 @@
     ov.style.webkitMaskSize = ov.style.maskSize = "contain";
     d.appendChild(ov);
     return d;
+  }
+
+  // Stock EmulationStation versus this build. Everything this build adds is
+  // gated here, so the preview and the exported file match the engine chosen.
+  function applyEngine(which, keepTheme) {
+    S.engine = which;
+    var stock = which === "stock";
+    S.stockFade = stock;
+    S.stockPrompts = stock;
+    S.stockBatteryFont = stock;
+    if (stock) {
+      if (!keepTheme) { S.helpPillOn = false; S.pillA = 0; }
+      if (S.logoScale === 1) S.logoScale = 1.2;
+    } else {
+      S.helpPillOn = true;
+      if (S.pillA === 0) S.pillA = 100;
+      S.logoScale = 1;
+    }
   }
 
   function pillBg() {
@@ -1164,6 +1212,21 @@
 
   function sysList() {
     return SYSTEM_LOGOS.length ? SYSTEM_LOGOS.map(function (e) { return e.id; }) : SYSTEMS;
+  }
+
+  function drawSystemExtra(scr) {
+    if (!SYSTEM_EXTRAS.length || !EXTRA_GEO) return;
+    var names = sysList();
+    var id = names[((cursor % names.length) + names.length) % names.length];
+    var hit = SYSTEM_EXTRAS.filter(function (e) { return e.id === id; })[0];
+    if (!hit) return;
+    var im = el("img", {
+      left: EXTRA_GEO.x + "px", top: EXTRA_GEO.y + "px",
+      width: EXTRA_GEO.w + "px", height: EXTRA_GEO.h + "px",
+      objectFit: EXTRA_GEO.fit
+    });
+    im.src = hit.extra; im.alt = "";
+    scr.appendChild(im);
   }
 
   function drawCarousel(scr) {
@@ -1494,7 +1557,7 @@
     else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawSystemInfo(scr); drawHelp(scr); drawPopup(scr); }
     else {
       drawTopBar(scr);
-      if (page === "carousel") { drawCarousel(scr); drawSystemInfo(scr); }
+      if (page === "carousel") { drawSystemExtra(scr); drawCarousel(scr); drawSystemInfo(scr); }
       else if (page === "gamelist") drawGamelist(scr);
       else { drawMenu(scr); drawMenuFooter(scr); }
       drawHelp(scr);
@@ -1620,6 +1683,9 @@
     [S.fCar, S.fGl, S.fGlHead, S.fClock, S.fBatt, S.fHelp, S.fMenu, S.fMenuTitle, S.fMenuFoot, S.fSaver, S.fPop]
       .forEach(function (id) { if (used.indexOf(id) < 0) used.push(id); });
     x.push('Fonts needed:   ' + used.join(', '));
+    x.push('Engine:         ' + (S.engine === "stock"
+      ? 'stock EmulationStation (no build-specific properties written)'
+      : 'R36S Enhanced build'));
     x.push('                (copy these into the theme\'s fonts/ folder)');
     x.push('-->');
     x.push('<theme>');
@@ -1827,6 +1893,7 @@
     x.push('\t<empty>./art/battery/battery-0.svg</empty>');
     x.push('    </batteryIndicator>');
     x.push('');
+    if (S.engine === "custom") {
     x.push('\t<keyboard name="keyboard">');
     x.push('\t<backspace>' + PATHS.kbBackspace + '</backspace>');
     x.push('\t<enter>' + PATHS.kbEnter + '</enter>');
@@ -1841,6 +1908,7 @@
     x.push('\t<keyPressColor>' + hex(css("kbPress")) + 'FF</keyPressColor>');
     x.push('\t<keyPressMs>' + S.kbFlash + '</keyPressMs>');
     x.push('    </keyboard>');
+    }
     x.push('');
     x.push('\t<volumeIndicator name="volumeIndicator">');
     x.push('\t<icon>' + PATHS.popVolume + '</icon>');
@@ -1851,12 +1919,14 @@
     x.push('\t<fontPath>./fonts/' + S.fPop + '</fontPath>');
     x.push('    </brightnessIndicator>');
     x.push('');
+    if (S.engine === "custom") {
     x.push('\t<text name="screensaverClock">');
     x.push('\t<fontPath>./fonts/' + S.fSaver + '</fontPath>');
     x.push('\t<fontSize>' + fontFrac(S.ssClock) + '</fontSize><!-- ' + S.ssClock + 'px; date renders at 36% -->');
     x.push('    </text>');
     x.push('\t<image name="screensaverBattery"><path>' + PATHS.ssBattIcon + '</path></image>');
     x.push('\t<image name="screensaverLock"><path>' + PATHS.ssLockIcon + '</path></image>');
+    }
     x.push('    </view>');
     x.push('</theme>');
 
@@ -2319,7 +2389,10 @@
       var b = el("button", null, name); b.className = "btn";
       b.addEventListener("click", function () {
         S = Object.assign({}, PRESETS[name]);
-        buildRail(); render(); toast(name + " loaded");
+        applyEngine("custom");
+        imported = null;
+        SYSTEM_LOGOS = []; SYSTEM_EXTRAS = []; EXTRA_GEO = null;
+        buildEngine(); buildRail(); render(); toast(name + " loaded");
       });
       box.appendChild(b);
     });
@@ -2374,6 +2447,25 @@
       });
       openThemeFiles(map);
     }).catch(function (e) { toast(e.message || "Could not read that zip"); });
+  }
+
+  function buildEngine() {
+    var box = document.getElementById("engine");
+    box.innerHTML = "";
+    var seg = el("div"); seg.className = "seg";
+    [["stock", "Stock ES"], ["custom", "This build"]].forEach(function (m) {
+      var b = el("button", null, m[1]);
+      b.setAttribute("aria-pressed", S.engine === m[0] ? "true" : "false");
+      b.title = m[0] === "stock"
+        ? "Preview and export for stock EmulationStation"
+        : "Preview and export for the R36S Enhanced build";
+      b.addEventListener("click", function () {
+        applyEngine(m[0]); buildEngine(); buildRail(); render();
+        toast(m[0] === "stock" ? "Previewing as stock EmulationStation" : "Previewing as the R36S Enhanced build");
+      });
+      seg.appendChild(b);
+    });
+    box.appendChild(seg);
   }
 
   function buildIO() {
@@ -2469,7 +2561,7 @@
   if (/sheet/i.test(location.hash)) setSheet(true);
 
   if (/general/i.test(location.hash)) railMode = "general";
-  buildPad(); buildIO();
+  buildPad(); buildIO(); buildEngine();
   buildPresets(); buildRail(); buildTabs(); render();
   // register the bundled faces, then redraw so measurements use real metrics
   Promise.all(FONT_LIB.map(registerFont)).then(function () { render(); });
