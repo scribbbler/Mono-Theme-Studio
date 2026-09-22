@@ -341,7 +341,6 @@
       glTop: 48, glLeft: 4, glWidth: 632, glFont: 32, glPitch: 53, glPillH: 52,
       glRadius: 26, glFit: false, glInset: 16, glHeader: 20,
       helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-      barFont: 20
     },
     "Mono Light": {
       bg: "#E0E0E0", text: "#000000", pill: "#000000", pillText: "#E0E0E0",
@@ -351,7 +350,6 @@
       glTop: 48, glLeft: 4, glWidth: 632, glFont: 32, glPitch: 53, glPillH: 52,
       glRadius: 26, glFit: false, glInset: 16, glHeader: 20,
       helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-      barFont: 20
     },
     "Mono Fit Dark": {
       bg: "#000000", text: "#F7FBF7", pill: "#F7FBF7", pillText: "#000000",
@@ -361,7 +359,6 @@
       glTop: 48, glLeft: 8, glWidth: 624, glFont: 32, glPitch: 53, glPillH: 52,
       glRadius: 26, glFit: true, glInset: 20, glHeader: 20,
       helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-      barFont: 20
     },
     "Mono Fit Light": {
       bg: "#E0E0E0", text: "#000000", pill: "#000000", pillText: "#E0E0E0",
@@ -371,7 +368,6 @@
       glTop: 48, glLeft: 8, glWidth: 624, glFont: 32, glPitch: 53, glPillH: 52,
       glRadius: 26, glFit: true, glInset: 20, glHeader: 20,
       helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-      barFont: 20
     }
   };
 
@@ -383,7 +379,7 @@
     glTop: 48, glLeft: 0, glWidth: 640, glFont: 32, glPitch: 53, glPillH: 52,
     glRadius: 0, glFit: false, glInset: 20, glHeader: 20,
     helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-    barFont: 20, pillGrad: true, pillEnd: "#1257C9", kbKey: "#D8D8D8"
+    pillGrad: true, pillEnd: "#1257C9", kbKey: "#D8D8D8"
   };
 
   // Keyboard / screensaver / pop-up values are shared across the presets; the
@@ -406,6 +402,9 @@
     fPop: "BPreplay-Bold.otf",
     pillGrad: false, pillEnd: "#1257C9",
     ovShow: true, ovOpacity: 100, ovBlend: "normal", ovPixel: true,
+    barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
+    clockX: 24, clockY: 8, clockSize: 20,
+    battRight: 20, battY: 8, battSize: 20, battGap: 6,
     carLogos: false, carLogoW: 320, carLogoH: 72,
     glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
@@ -536,10 +535,16 @@
 
   // ---------- preview ----------
   function drawTopBar(scr) {
-    var fs = S.barFont;
+    if (S.barBgOn) {
+      scr.appendChild(el("div", {
+        left: "0px", top: "0px", width: SW + "px", height: S.barH + "px",
+        background: css("barBg")
+      }));
+    }
     var clock = el("div", {
-      left: "24px", top: "8px", width: "200px", height: "32px", display: "flex",
-      alignItems: "center", font: fontCss(fs, S.fClock), color: css("text")
+      left: S.clockX + "px", top: S.clockY + "px", width: "220px", height: "32px",
+      display: "flex", alignItems: "center",
+      font: fontCss(S.clockSize, S.fClock), color: css("text")
     }, "04:20 AM");
     scr.appendChild(clock);
 
@@ -554,9 +559,9 @@
     }
 
     var batt = el("div", {
-      left: "0px", top: "8px", width: "620px", height: "32px", display: "flex",
-      alignItems: "center", justifyContent: "flex-end", gap: "6px",
-      font: fontCss(fs, S.fBatt), color: css("text")
+      left: "0px", top: S.battY + "px", width: (SW - S.battRight) + "px", height: "32px",
+      display: "flex", alignItems: "center", justifyContent: "flex-end", gap: S.battGap + "px",
+      font: fontCss(S.battSize, S.fBatt), color: css("text")
     });
     if (ART.battery) {
       var bimg = el("img", { position: "relative", width: "32px", height: "32px", objectFit: "contain" });
@@ -1176,18 +1181,26 @@
     x.push('         <text name="clock">');
     x.push('\t     <fontPath>./fonts/' + S.fClock + '</fontPath>');
     x.push('\t     <color>' + hex8("text") + '</color>');
-    x.push('         <fontSize>' + fontFrac(S.barFont) + '</fontSize>');
-    x.push('         <pos>' + f(24 / SW, 6) + ' 0.0166667</pos>');
-    x.push('         <size>0.4 0.0666667</size>');
-    x.push('         <alignment>left</alignment><verticalAlignment>center</verticalAlignment>');
+    x.push('         <fontSize>' + fontFrac(S.clockSize) + '</fontSize><!-- ' + S.clockSize + 'px -->');
+    if (S.barBgOn) {
+      x.push('         <backgroundColor>' + hex8("barBg") + '</backgroundColor><!-- painted across the whole bar -->');
+      x.push('         <pos>0 0</pos>');
+      x.push('         <size>1 ' + f(S.barH / SH, 6) + '</size><!-- ' + S.barH + 'px tall bar -->');
+      x.push('         <padding>' + f(S.clockX / SW, 6) + ' ' + f(S.clockY / SH, 6) + ' 0 0</padding><!-- clock sits ' + S.clockX + ', ' + S.clockY + 'px inside -->');
+      x.push('         <alignment>left</alignment><verticalAlignment>top</verticalAlignment>');
+    } else {
+      x.push('         <pos>' + f(S.clockX / SW, 6) + ' ' + f(S.clockY / SH, 6) + '</pos><!-- ' + S.clockX + ', ' + S.clockY + 'px -->');
+      x.push('         <size>0.4 0.0666667</size>');
+      x.push('         <alignment>left</alignment><verticalAlignment>center</verticalAlignment>');
+    }
     x.push('    </text>');
     x.push('\t<batteryIndicator name="batteryIndicator">');
     x.push('\t<color>' + hex8("text") + '</color>');
-    x.push('\t<pos>0 0.0166667</pos><size>0.96875 0.0666667</size>');
+    x.push('\t<pos>0 ' + f(S.battY / SH, 6) + '</pos><size>' + f((SW - S.battRight) / SW, 6) + ' 0.0666667</size><!-- right edge ' + S.battRight + 'px in -->');
     x.push('\t<horizontalAlignment>right</horizontalAlignment>');
     x.push('\t<fontPath>./fonts/' + S.fBatt + '</fontPath>');
-    x.push('\t<fontSize>' + fontFrac(S.barFont) + '</fontSize>');
-    x.push('\t<itemSpacing>0.009375</itemSpacing>');
+    x.push('\t<fontSize>' + fontFrac(S.battSize) + '</fontSize><!-- ' + S.battSize + 'px -->');
+    x.push('\t<itemSpacing>' + f(S.battGap / SW, 6) + '</itemSpacing><!-- ' + S.battGap + 'px -->');
     x.push('\t<incharge>./art/battery/battery-charging.svg</incharge>');
     x.push('\t<full>' + PATHS.battery + '</full>');
     x.push('\t<at75>./art/battery/battery-75.svg</at75>');
@@ -1257,7 +1270,7 @@
       { t: "library" },
       { t: "note", label: "Each text layer points at a font file, so weight comes from the file you choose. Copy the files you use into the theme's fonts folder." }
     ]},
-    { name: "Typography — every layer", open: true, fields: [
+    { name: "Fonts at a glance", fields: [
       { k: "fClock", t: "font", label: "Clock" },
       { k: "fBatt", t: "font", label: "Battery %" },
       { k: "fCar", t: "font", label: "Carousel names" },
@@ -1277,10 +1290,24 @@
       { k: "ovPixel", t: "bool", label: "Pixelated scaling", hint: "Keeps a small grid or scanline PNG crisp instead of blurring it." },
       { t: "note", label: "A full-screen PNG over the whole interface — scanlines, an LCD grid, a dot matrix. Exported as an extra image with a high zIndex, which this build draws above the list." }
     ]) },
-    { name: "Top bar", fields: [
-      { k: "barFont", t: "num", label: "Clock / battery size", min: 12, max: 32, step: 1, unit: "px" },
-      { k: "fClock", t: "font", label: "Clock font" },
-      { k: "fBatt", t: "font", label: "Battery font" }
+    { name: "Status bar · Background", fields: [
+      { k: "barBgOn", t: "bool", label: "Show a bar behind the top row" },
+      { k: "barBg", t: "color", label: "Bar colour" },
+      { k: "barH", t: "num", label: "Bar height", min: 24, max: 96, step: 1, unit: "px" },
+      { t: "note", label: "The engine has no status-bar element, so the bar is painted as the clock's own background stretched across the screen — the clock is then placed inside it with padding. Lower the opacity for a translucent bar." }
+    ]},
+    { name: "Status bar · Clock", fields: [
+      { k: "fClock", t: "font", label: "Font" },
+      { k: "clockSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
+      { k: "clockX", t: "num", label: "Left position", min: 0, max: 300, step: 1, unit: "px" },
+      { k: "clockY", t: "num", label: "Top position", min: 0, max: 40, step: 1, unit: "px" }
+    ]},
+    { name: "Status bar · Battery", fields: [
+      { k: "fBatt", t: "font", label: "Font" },
+      { k: "battSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
+      { k: "battRight", t: "num", label: "Right margin", min: 0, max: 120, step: 1, unit: "px" },
+      { k: "battY", t: "num", label: "Top position", min: 0, max: 40, step: 1, unit: "px" },
+      { k: "battGap", t: "num", label: "Icon to text gap", min: 0, max: 24, step: 1, unit: "px" }
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
