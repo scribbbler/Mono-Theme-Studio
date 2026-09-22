@@ -418,6 +418,8 @@
     barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
     clockX: 24, clockY: 8, clockSize: 20,
     battRight: 20, battY: 8, battSize: 20, battGap: 6,
+    siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
+    siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
     glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
@@ -532,12 +534,15 @@
     }
     function el(token, tag, name) {
       var vs = views(token);
+      // later definitions override earlier ones (includes, subsets), so the
+      // last match is the one the engine would use
+      var found = null;
       for (var i = 0; i < vs.length; i++) {
         var list = vs[i].getElementsByTagName(tag);
         for (var j = 0; j < list.length; j++)
-          if (!name || list[j].getAttribute("name") === name) return list[j];
+          if (!name || list[j].getAttribute("name") === name) found = list[j];
       }
-      return null;
+      return found;
     }
     function prop(token, tag, name, p) {
       var e = el(token, tag, name);
@@ -557,13 +562,39 @@
       colour: function (token, tag, name, p) {
         var v = prop(token, tag, name, p);
         if (!v) return null;
-        v = v.replace("#", "");
-        if (v.length !== 6 && v.length !== 8) return null;
+        v = v.replace("#", "").trim();
+        if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(v)) return null;
         return { hex: "#" + v.slice(0, 6).toUpperCase(), a: v.length === 8 ? Math.round(parseInt(v.slice(6), 16) / 255 * 100) : 100 };
       }
     };
   }
 
+
+
+  // Imported files can hold anything, so every number goes through here: not
+  // finite, it is ignored; out of range, it is clamped to the slider's bounds.
+  var RANGES = null;
+  function buildRanges() {
+    RANGES = {};
+    function walk(groups) {
+      (groups || []).forEach(function (g) {
+        (g.fields || []).forEach(function (f) {
+          if (f.t === "num" && f.k) RANGES[f.k] = [f.min, f.max, f.step];
+        });
+      });
+    }
+    walk(GENERAL);
+    Object.keys(PAGE_GROUPS).forEach(function (k) { walk(PAGE_GROUPS[k]); });
+  }
+  var clamped = [];
+  function setNum(key, v) {
+    if (v == null || typeof v !== "number" || !isFinite(v)) return;
+    if (!RANGES) buildRanges();
+    var r = RANGES[key];
+    if (r && (v < r[0] || v > r[1])) { clamped.push(key); v = Math.min(Math.max(v, r[0]), r[1]); }
+    var step = r && r[2] ? r[2] : 1;
+    S[key] = step >= 1 ? Math.round(v) : Math.round(v / step) * step;
+  }
 
   var imported = null;   // { name, files, doc }
 
@@ -577,10 +608,53 @@
     return null;
   }
 
+  function parseThemeXml(text) {
+    function attempt(t) {
+      var d = new DOMParser().parseFromString(t, "application/xml");
+      return d.getElementsByTagName("parsererror").length ? null : d;
+    }
+    var doc = attempt(text);
+    if (doc) return doc;
+    // Real themes in the wild put a comment above the XML declaration, which
+    // pugixml (what the device uses) accepts. Drop the declaration and retry.
+    var relaxed = text.replace(/<\?xml[\s\S]*?\?>/g, "").replace(/^\uFEFF/, "");
+    doc = attempt(relaxed);
+    if (doc) return doc;
+    // Last resort: start at the root element.
+    var i = relaxed.indexOf("<theme");
+    if (i > 0) { doc = attempt(relaxed.slice(i)); if (doc) return doc; }
+    var d2 = new DOMParser().parseFromString(text, "application/xml");
+    var err = d2.getElementsByTagName("parsererror")[0];
+    throw new Error("theme.xml could not be parsed: " + (err ? err.textContent.split("\n")[0] : "unknown error"));
+  }
+
+  // Themes often split their XML with <include>; pull those in before reading.
+  function loadIncludes(doc, files, baseDir, depth) {
+    var incs = [].slice.call(doc.getElementsByTagName("include"));
+    if (!incs.length || depth > 4) return Promise.resolve(doc);
+    return Promise.all(incs.map(function (inc) {
+      var path = resolve(files, baseDir, inc.textContent.trim());
+      if (!path || !files[path]) return null;
+      return Promise.resolve(files[path]()).then(function (bytes) {
+        var sub = parseThemeXml(new TextDecoder().decode(bytes));
+        var subDir = path.indexOf("/") >= 0 ? path.slice(0, path.lastIndexOf("/")) : "";
+        return loadIncludes(sub, files, subDir, depth + 1).then(function (sub2) {
+          [].slice.call(sub2.documentElement.childNodes).forEach(function (n) {
+            inc.parentNode.insertBefore(doc.importNode(n, true), inc);
+          });
+        });
+      }).catch(function () {});
+    })).then(function () { return doc; });
+  }
+
   function applyTheme(files, xmlPath, xmlText) {
-    var doc = new DOMParser().parseFromString(xmlText, "application/xml");
-    if (doc.getElementsByTagName("parsererror").length) throw new Error("theme.xml could not be parsed.");
+    var doc = parseThemeXml(xmlText);
     var baseDir = xmlPath.indexOf("/") >= 0 ? xmlPath.slice(0, xmlPath.lastIndexOf("/")) : "";
+    return loadIncludes(doc, files, baseDir, 0).then(function () { return applyDoc(doc, files, baseDir); });
+  }
+
+  function applyDoc(doc, files, baseDir) {
+    clamped = [];
     var r = makeReader(doc, baseDir);
     var jobs = [];
 
@@ -606,7 +680,7 @@
       }));
     }
     function col(v, key) { if (v) { S[key] = v.hex; S[key + "A"] = v.a; } }
-    function px(v, axis, key) { if (v != null) S[key] = Math.round(v * (axis === "x" ? SW : SH)); }
+    function px(v, axis, key) { if (v != null) setNum(key, v * (axis === "x" ? SW : SH)); }
 
     // ---- palette ----
     col(r.colour("system", "carousel", null, "selectorColor"), "pill");
@@ -623,70 +697,80 @@
 
     // ---- carousel ----
     var pos = r.pair("system", "carousel", null, "pos"), size = r.pair("system", "carousel", null, "size");
-    if (pos) S.carTop = Math.round(pos[1] * SH);
-    if (size) S.carHeight = Math.round(size[1] * SH);
+    if (pos) setNum("carTop", pos[1] * SH);
+    if (size) setNum("carHeight", size[1] * SH);
     var logoSize = r.pair("system", "carousel", null, "logoSize");
-    if (logoSize) { S.carRowH = Math.round(logoSize[1] * SH); S.carIndent = Math.round(logoSize[0] * SW / 10); S.carLogoW = Math.round(logoSize[0] * SW); S.carLogoH = Math.round(logoSize[1] * SH); }
+    if (logoSize) { setNum("carRowH", logoSize[1] * SH); setNum("carIndent", logoSize[0] * SW / 10); setNum("carLogoW", logoSize[0] * SW); setNum("carLogoH", logoSize[1] * SH); }
     px(r.num("system", "carousel", null, "selectorHeight"), "y", "carPillH");
     px(r.num("system", "carousel", null, "selectorRadius"), "y", "carRadius");
     px(r.num("system", "carousel", null, "selectorWidth"), "x", "carPillW");
     px(r.num("system", "carousel", null, "selectorPadding"), "y", "carPad");
-    var mlc = r.num("system", "carousel", null, "maxLogoCount"); if (mlc) S.carRows = Math.round(mlc);
+    setNum("carRows", r.num("system", "carousel", null, "maxLogoCount"));
     S.carFit = (r.prop("system", "carousel", null, "selectorFitContent") || "") === "true";
     S.listScroll = (r.prop("system", "carousel", null, "listScroll") || "") === "true";
+    var siVis = r.prop("system", "text", "systemInfo", "visible");
+    var siFs = r.num("system", "text", "systemInfo", "fontSize");
+    S.siShow = siVis !== "false" && !!siFs && siFs > 0.001;
+    if (siFs) setNum("siSize", siFs * SH * BOOST);
+    var siPos = r.pair("system", "text", "systemInfo", "pos");
+    if (siPos) setNum("siY", siPos[1] * SH);
+    var siAl = r.prop("system", "text", "systemInfo", "alignment");
+    if (siAl && /^(left|center|right)$/.test(siAl)) S.siAlign = siAl;
+    col(r.colour("system", "text", "systemInfo", "color"), "siColor");
+    useFont(r.prop("system", "text", "systemInfo", "fontPath"), "fSI");
     S.carLogos = !!r.el("system", "image", "logo");
     useArt(r.prop("system", "image", "logo", "path"), "sysLogo");
     var lt = r.num("system", "text", "logoText", "fontSize");
-    if (lt) S.carFont = Math.round(lt * SH * BOOST);
+    if (lt) setNum("carFont", lt * SH * BOOST);
     S.uCar = (r.prop("system", "text", "logoText", "forceUppercase") || "") === "true";
     useFont(r.prop("system", "text", "logoText", "fontPath"), "fCar");
 
     // ---- gamelist ----
     var gp = r.pair("basic", "textlist", "gamelist", "pos"), gs = r.pair("basic", "textlist", "gamelist", "size");
-    if (gp) { S.glLeft = Math.round(gp[0] * SW); S.glTop = Math.round(gp[1] * SH); }
-    if (gs) S.glWidth = Math.round(gs[0] * SW);
+    if (gp) { setNum("glLeft", gp[0] * SW); setNum("glTop", gp[1] * SH); }
+    if (gs) setNum("glWidth", gs[0] * SW);
     var gf = r.num("basic", "textlist", "gamelist", "fontSize");
-    if (gf) S.glFont = Math.round(gf * SH * BOOST);
+    if (gf) setNum("glFont", gf * SH * BOOST);
     px(r.num("basic", "textlist", "gamelist", "selectorHeight"), "y", "glPillH");
     px(r.num("basic", "textlist", "gamelist", "selectorRadius"), "y", "glRadius");
     px(r.num("basic", "textlist", "gamelist", "horizontalMargin"), "x", "glInset");
     var ls = r.num("basic", "textlist", "gamelist", "lineSpacing");
-    if (ls) S.glPitch = Math.round(ls * glyphBox(S.glFont, S.fGl));
+    if (ls) setNum("glPitch", ls * glyphBox(S.glFont, S.fGl));
     S.glFit = (r.prop("basic", "textlist", "gamelist", "selectorFitContent") || "") === "true";
     useFont(r.prop("basic", "textlist", "gamelist", "fontPath"), "fGl");
     var gh = r.num("basic", "text", "logoText", "fontSize");
-    if (gh) S.glHeader = Math.round(gh * SH * BOOST);
+    if (gh) setNum("glHeader", gh * SH * BOOST);
     useFont(r.prop("basic", "text", "logoText", "fontPath"), "fGlHead");
     S.glArt = !!r.el("basic", "image", "md_image");
 
     // ---- status bar ----
     var cp = r.pair("screen", "text", "clock", "pos");
-    if (cp) { S.clockX = Math.round(cp[0] * SW); S.clockY = Math.round(cp[1] * SH); }
+    if (cp) { setNum("clockX", cp[0] * SW); setNum("clockY", cp[1] * SH); }
     var cf = r.num("screen", "text", "clock", "fontSize");
-    if (cf) S.clockSize = Math.round(cf * SH * BOOST);
+    if (cf) setNum("clockSize", cf * SH * BOOST);
     useFont(r.prop("screen", "text", "clock", "fontPath"), "fClock");
     var bs = r.pair("screen", "batteryIndicator", null, "size");
-    if (bs) S.battRight = Math.round(SW - bs[0] * SW);
+    if (bs) setNum("battRight", SW - bs[0] * SW);
     var bp = r.pair("screen", "batteryIndicator", null, "pos");
-    if (bp) S.battY = Math.round(bp[1] * SH);
+    if (bp) setNum("battY", bp[1] * SH);
     var bf = r.num("screen", "batteryIndicator", null, "fontSize");
-    if (bf) S.battSize = Math.round(bf * SH * BOOST);
+    if (bf) setNum("battSize", bf * SH * BOOST);
     px(r.num("screen", "batteryIndicator", null, "itemSpacing"), "x", "battGap");
     useFont(r.prop("screen", "batteryIndicator", null, "fontPath"), "fBatt");
     useArt(r.prop("screen", "batteryIndicator", null, "full"), "battery");
     var barBg = r.colour("screen", "text", "clock", "backgroundColor");
     if (barBg) { S.barBgOn = true; S.barBg = barBg.hex; S.barBgA = barBg.a;
-      var csz = r.pair("screen", "text", "clock", "size"); if (csz) S.barH = Math.round(csz[1] * SH); }
+      var csz = r.pair("screen", "text", "clock", "size"); if (csz) setNum("barH", csz[1] * SH); }
     else S.barBgOn = false;
 
     // ---- hint bar ----
     var hf = r.num("system", "helpsystem", null, "fontSize");
-    if (hf) S.helpFont = Math.round(hf * SH * BOOST);
+    if (hf) setNum("helpFont", hf * SH * BOOST);
     px(r.num("system", "helpsystem", null, "iconSize"), "y", "helpIcon");
     var hpad = r.pair("system", "helpsystem", null, "backgroundPadding");
-    if (hpad) { S.helpPadX = Math.round(hpad[0] * SW); S.helpPadY = Math.round(hpad[1] * SH); }
+    if (hpad) { setNum("helpPadX", hpad[0] * SW); setNum("helpPadY", hpad[1] * SH); }
     var hp = r.pair("system", "helpsystem", null, "pos");
-    if (hp) S.helpMargin = Math.round(hp[0] * SW);
+    if (hp) setNum("helpMargin", hp[0] * SW);
     var vis = r.prop("system", "helpsystem", null, "visible");
     S.helpShow = vis !== "false";
     useFont(r.prop("system", "helpsystem", null, "fontPath"), "fHelp");
@@ -696,13 +780,13 @@
 
     // ---- menu / keyboard / screensaver ----
     var mf = r.num("menu", "menuText", "menutext", "fontSize");
-    if (mf) S.menuFont = Math.round(mf * SH * BOOST);
+    if (mf) setNum("menuFont", mf * SH * BOOST);
     useFont(r.prop("menu", "menuText", "menutext", "fontPath"), "fMenu");
     var mtf = r.num("menu", "menuText", "menutitle", "fontSize");
-    if (mtf) S.menuTitleFont = Math.round(mtf * SH * BOOST);
+    if (mtf) setNum("menuTitleFont", mtf * SH * BOOST);
     useFont(r.prop("menu", "menuText", "menutitle", "fontPath"), "fMenuTitle");
     var mff = r.num("menu", "menuText", "menufooter", "fontSize");
-    if (mff) S.menuFootFont = Math.round(mff * SH * BOOST);
+    if (mff) setNum("menuFootFont", mff * SH * BOOST);
     useFont(r.prop("menu", "menuText", "menufooter", "fontPath"), "fMenuFoot");
     useArt(r.prop("menu", "menuArrow", "menuarrow", "path"), "arrow");
     px(r.num("screen", "keyboard", null, "width"), "x", "kbWidth");
@@ -710,20 +794,40 @@
     px(r.num("screen", "keyboard", null, "keySpacing"), "x", "kbSpacing");
     px(r.num("screen", "keyboard", null, "keyRadius"), "y", "kbRadius");
     px(r.num("screen", "keyboard", null, "iconSize"), "y", "kbIcon");
-    var kms = r.num("screen", "keyboard", null, "keyPressMs"); if (kms) S.kbFlash = Math.round(kms);
+    setNum("kbFlash", r.num("screen", "keyboard", null, "keyPressMs"));
     useArt(r.prop("screen", "keyboard", null, "backspace"), "kbBackspace");
     useArt(r.prop("screen", "keyboard", null, "enter"), "kbEnter");
     useArt(r.prop("screen", "keyboard", null, "shift"), "kbShiftIcon");
     useArt(r.prop("screen", "keyboard", null, "shiftActive"), "kbShiftOn");
     var sf = r.num("screen", "text", "screensaverClock", "fontSize");
-    if (sf) S.ssClock = Math.round(sf * SH * BOOST);
+    if (sf) setNum("ssClock", sf * SH * BOOST);
     useFont(r.prop("screen", "text", "screensaverClock", "fontPath"), "fSaver");
     useArt(r.prop("screen", "volumeIndicator", null, "icon"), "popVolume");
     useArt(r.prop("screen", "brightnessIndicator", null, "icon"), "popBright");
 
+    // Themes ship per-system logos and per-game art; pick real examples out of
+    // the folder so the preview shows what the theme actually provides.
+    function firstMatch(re) {
+      var keys = Object.keys(files).filter(function (k) { return re.test(k); });
+      keys.sort(function (a, b) { return a.length - b.length; });
+      return keys[0];
+    }
+    if (S.carLogos && !ART.sysLogo) {
+      // the theme declares logos but points at a per-system file name, so show
+      // a real one from its own folder
+      var logo = firstMatch(/\/(system|logos?|svg)\/[^\/]+\.(png|svg)$/i);
+      if (logo) {
+        jobs.push(Promise.resolve(files[logo]()).then(function (bytes) {
+          ART.sysLogo = { src: bytesToDataURL(bytes, mimeOf(logo)), name: logo.split("/").pop() };
+        }));
+      }
+    }
+
     // ---- background art (these themes bake the hint bar into it) ----
-    useArt(r.prop("system", "image", "staticBackground", "path"), "bgSystem");
-    useArt(r.prop("basic", "image", "background", "path"), "bgGamelist");
+    useArt(r.prop("system", "image", "staticBackground", "path") ||
+           r.prop("system", "image", "background", "path"), "bgSystem");
+    useArt(r.prop("basic", "image", "background", "path") ||
+           r.prop("basic", "image", "staticBackground", "path"), "bgGamelist");
     useArt(r.prop("menu", "menuBackground", "menubg", "path"), "bgMenu");
 
     // background colour: fall back to the gamelist text colour's opposite is
@@ -731,8 +835,26 @@
     var pc = r.colour("basic", "textlist", "gamelist", "primaryColor");
     if (pc) col(pc, "text");
 
+    // Themes name their text elements freely, so a layer-by-layer lookup can
+    // miss. Fall back to the face the theme uses most, so it still reads right.
+    var counts = {};
+    [].slice.call(doc.getElementsByTagName("fontPath")).forEach(function (n) {
+      var v = (n.textContent || "").trim();
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    });
+    var common = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0];
+    if (common) {
+      var defaults = { fCar: 1, fGl: 1, fGlHead: 1, fHelp: 1, fMenu: 1, fMenuTitle: 1, fSI: 1 };
+      var before = {};
+      Object.keys(defaults).forEach(function (k) { before[k] = S[k]; });
+      Object.keys(defaults).forEach(function (k) {
+        if (/^BPreplay/.test(S[k])) useFont(common, k);   // untouched by the lookups above
+      });
+    }
+
     return Promise.all(jobs).then(function () {
-      imported = { name: (baseDir.split("/").pop() || "theme"), files: files, doc: doc };
+      imported = { name: (baseDir.split("/").pop() || "theme"), files: files, doc: doc,
+        clamped: clamped.filter(function (v, i, a) { return a.indexOf(v) === i; }) };
       return imported;
     });
   }
@@ -898,6 +1020,17 @@
       else box.style.right = (S.helpMargin - S.helpPadX) + "px";
       scr.appendChild(box);
     });
+  }
+
+  function drawSystemInfo(scr) {
+    if (!S.siShow) return;
+    var txt = upper("152 games available", S.siUpper);
+    scr.appendChild(el("div", {
+      left: "0px", top: S.siY + "px", width: SW + "px", height: "28px",
+      display: "flex", alignItems: "center",
+      justifyContent: S.siAlign === "left" ? "flex-start" : S.siAlign === "right" ? "flex-end" : "center",
+      padding: "0 24px", font: fontCss(S.siSize, S.fSI), color: css("siColor")
+    }, txt));
   }
 
   function drawCarousel(scr) {
@@ -1221,10 +1354,10 @@
     drawBackdrop(scr);
     if (page === "saver") { drawSaver(scr); }
     else if (page === "keyboard") { drawTopBar(scr); drawKeyboard(scr); }
-    else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawHelp(scr); drawPopup(scr); }
+    else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawSystemInfo(scr); drawHelp(scr); drawPopup(scr); }
     else {
       drawTopBar(scr);
-      if (page === "carousel") drawCarousel(scr);
+      if (page === "carousel") { drawCarousel(scr); drawSystemInfo(scr); }
       else if (page === "gamelist") drawGamelist(scr);
       else { drawMenu(scr); drawMenuFooter(scr); }
       drawHelp(scr);
@@ -1394,6 +1527,20 @@
     x.push('\t<forceUppercase>' + (S.uCar ? 'true' : 'false') + '</forceUppercase>');
     x.push('\t<alignment>left</alignment>');
     x.push('\t<color>' + hex8("text") + '</color>');
+    x.push('    </text>');
+    x.push('    <text name="systemInfo">');
+    if (S.siShow) {
+      x.push('\t<fontPath>./fonts/' + S.fSI + '</fontPath>');
+      x.push('\t<fontSize>' + fontFrac(S.siSize) + '</fontSize><!-- ' + S.siSize + 'px -->');
+      x.push('\t<pos>0 ' + f(S.siY / SH, 6) + '</pos><size>1 0.0583333</size>');
+      x.push('\t<alignment>' + S.siAlign + '</alignment>');
+      x.push('\t<forceUppercase>' + (S.siUpper ? 'true' : 'false') + '</forceUppercase>');
+      x.push('\t<color>' + hex8("siColor") + '</color>');
+    } else {
+      x.push('\t<visible>false</visible>');
+      x.push('\t<fontSize>0</fontSize>');
+    }
+    x.push('\t<zIndex>5</zIndex>');
     x.push('    </text>');
     x.push('    </view>');
     x.push('    </feature>');
@@ -1625,14 +1772,14 @@
     { name: "Status bar · Clock", fields: [
       { k: "fClock", t: "font", label: "Font" },
       { k: "clockSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
-      { k: "clockX", t: "num", label: "Left position", min: 0, max: 300, step: 1, unit: "px" },
-      { k: "clockY", t: "num", label: "Top position", min: 0, max: 40, step: 1, unit: "px" }
+      { k: "clockX", t: "num", label: "Left position", min: 0, max: 640, step: 1, unit: "px" },
+      { k: "clockY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" }
     ]},
     { name: "Status bar · Battery", fields: [
       { k: "fBatt", t: "font", label: "Font" },
       { k: "battSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
-      { k: "battRight", t: "num", label: "Right margin", min: 0, max: 120, step: 1, unit: "px" },
-      { k: "battY", t: "num", label: "Top position", min: 0, max: 40, step: 1, unit: "px" },
+      { k: "battRight", t: "num", label: "Right margin", min: 0, max: 620, step: 1, unit: "px" },
+      { k: "battY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" },
       { k: "battGap", t: "num", label: "Icon to text gap", min: 0, max: 24, step: 1, unit: "px" }
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
@@ -1651,7 +1798,7 @@
     carousel: [{ name: "Carousel", open: true, fields: [
       { k: "listScroll", t: "bool", label: "List-style navigation", hint: "Selection walks the rows and the list scrolls, like a gamelist." },
       { k: "carFit", t: "bool", label: "Pill hugs the name" },
-      { k: "carRows", t: "num", label: "Visible rows", min: 3, max: 9, step: 1 },
+      { k: "carRows", t: "num", label: "Visible rows", min: 1, max: 12, step: 1 },
       { k: "carTop", t: "num", label: "Region top", min: 0, max: 120, step: 1, unit: "px" },
       { k: "carHeight", t: "num", label: "Region height", min: 200, max: 440, step: 2, unit: "px" },
       { k: "carRowH", t: "num", label: "Row height", min: 40, max: 110, step: 1, unit: "px" },
@@ -1659,8 +1806,8 @@
       { k: "carRadius", t: "num", label: "Pill radius", min: 0, max: 55, step: 1, unit: "px" },
       { k: "carPillW", t: "num", label: "Pill width / max", min: 200, max: 640, step: 2, unit: "px" },
       { k: "carPad", t: "num", label: "Hug padding", min: 4, max: 60, step: 1, unit: "px" },
-      { k: "carIndent", t: "num", label: "Text indent", min: 0, max: 120, step: 1, unit: "px" },
-      { k: "carFont", t: "num", label: "Name size", min: 18, max: 60, step: 1, unit: "px" },
+      { k: "carIndent", t: "num", label: "Text indent", min: 0, max: 320, step: 1, unit: "px" },
+      { k: "carFont", t: "num", label: "Name size", min: 8, max: 80, step: 1, unit: "px" },
       { k: "fCar", t: "font", label: "Name font" },
       { k: "uCar", t: "bool", label: "Uppercase names" },
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
@@ -1675,7 +1822,7 @@
       { k: "glTop", t: "num", label: "List top", min: 44, max: 140, step: 1, unit: "px" },
       { k: "glLeft", t: "num", label: "List left", min: 0, max: 60, step: 1, unit: "px" },
       { k: "glWidth", t: "num", label: "List width / max pill", min: 300, max: 640, step: 2, unit: "px" },
-      { k: "glFont", t: "num", label: "Game name size", min: 14, max: 48, step: 1, unit: "px" },
+      { k: "glFont", t: "num", label: "Game name size", min: 8, max: 64, step: 1, unit: "px" },
       { k: "glPitch", t: "num", label: "Row pitch", min: 24, max: 80, step: 1, unit: "px" },
       { k: "glPillH", t: "num", label: "Pill height", min: 20, max: 76, step: 1, unit: "px" },
       { k: "glRadius", t: "num", label: "Pill radius", min: 0, max: 38, step: 1, unit: "px" },
@@ -2061,7 +2208,8 @@
       return applyTheme(map, xmlPath, new TextDecoder().decode(bytes));
     }).then(function (info) {
       buildRail(); render();
-      toast("Opened " + info.name);
+      toast("Opened " + info.name + (info.clamped && info.clamped.length
+        ? " — " + info.clamped.length + " value(s) outside this tool's range were clamped" : ""));
     }).catch(function (e) { toast(e.message || "Could not read that theme"); });
   }
   function openZip(file) {
