@@ -351,7 +351,7 @@
     pillGrad: false, pillEnd: "#1257C9",
     ovShow: true, ovOpacity: 100, ovBlend: "normal", ovPixel: true,
     carLogos: false, carLogoW: 320, carLogoH: 72,
-    glArt: false, artX: 360, artY: 96, artW: 260, artH: 200,
+    glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
     helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100
   };
@@ -626,7 +626,9 @@
         font: fontCss(14, S.fGl), color: css("text"), overflow: "hidden"
       }, ART.gameArt ? "" : "game art");
       if (ART.gameArt) {
-        var gi = el("img", { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "contain" });
+        var fitMap = { fit: "contain", fill: "cover", stretch: "fill" };
+        var gi = el("img", { position: "absolute", inset: "0", width: "100%", height: "100%",
+          objectFit: fitMap[S.artMode] || "contain" });
         gi.src = ART.gameArt.src; gi.alt = "";
         box.appendChild(gi);
       }
@@ -1045,10 +1047,11 @@
     x.push('\t<scrollSound>./audio/move.wav</scrollSound>');
     x.push('    </textlist>');
     if (S.glArt) {
+      var sizeProp = S.artMode === "fill" ? "minSize" : S.artMode === "stretch" ? "size" : "maxSize";
       x.push('    <image name="md_image"><!-- scraped art; detailed / video views -->');
-      x.push('\t<pos>' + f(S.artX / SW, 6) + ' ' + f(S.artY / SH, 6) + '</pos>');
-      x.push('\t<size>' + f(S.artW / SW, 6) + ' ' + f(S.artH / SH, 6) + '</size>');
-      x.push('\t<origin>0 0</origin>');
+      x.push('\t<pos>' + f((S.artX + S.artW / 2) / SW, 6) + ' ' + f((S.artY + S.artH / 2) / SH, 6) + '</pos><!-- centre of the ' + S.artW + 'x' + S.artH + 'px box -->');
+      x.push('\t<origin>0.5 0.5</origin>');
+      x.push('\t<' + sizeProp + '>' + f(S.artW / SW, 6) + ' ' + f(S.artH / SH, 6) + '</' + sizeProp + '><!-- ' + S.artMode + ' -->');
       x.push('    </image>');
     }
     if (ART.overlay || S.ovShow) {
@@ -1239,7 +1242,7 @@
       { k: "carLogoW", t: "num", label: "Logo box width", min: 80, max: 620, step: 10, unit: "px" },
       { k: "carLogoH", t: "num", label: "Logo box height", min: 30, max: 120, step: 2, unit: "px" }
     ].concat(artFields(["sysLogo"])).concat([
-      { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). The engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
+      { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). They are fitted inside the logo box keeping their aspect, the engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
     ]) }],
     gamelist: [{ name: "Gamelist", open: true, fields: [
       { k: "glFit", t: "bool", label: "Pill hugs the name" },
@@ -1260,9 +1263,11 @@
       { k: "artX", t: "num", label: "Art left", min: 0, max: 600, step: 2, unit: "px" },
       { k: "artY", t: "num", label: "Art top", min: 44, max: 400, step: 2, unit: "px" },
       { k: "artW", t: "num", label: "Art width", min: 60, max: 400, step: 2, unit: "px" },
-      { k: "artH", t: "num", label: "Art height", min: 60, max: 360, step: 2, unit: "px" }
+      { k: "artH", t: "num", label: "Art height", min: 60, max: 360, step: 2, unit: "px" },
+      { k: "artMode", t: "choice", label: "Sizing", choices: [["fit", "Fit"], ["fill", "Fill"], ["stretch", "Stretch"]],
+        hint: "Scraped art comes in every shape — box art is tall, screenshots are 4:3. Fit keeps the aspect inside your box, Fill crops to cover it, Stretch distorts." }
     ].concat(artFields(["gameArt"])).concat([
-      { t: "note", label: "Game art comes from each game's scraped image, so the theme sets only its position and size — the file you load here is just a stand-in for the preview." }
+      { t: "note", label: "Game art is each game's scraped image, so the theme sets only where it goes — the file here is a stand-in. The box below is exported as a centred anchor plus the sizing property, so art of any shape stays inside it." }
     ]) }],
     menu: [{ name: "Menu", open: true, fields: [
       { k: "menuFont", t: "num", label: "Row size", min: 14, max: 32, step: 1, unit: "px" },
@@ -1334,6 +1339,20 @@
     if (fd.t === "note") {
       var n = el("div", null, fd.label); n.className = "hint"; n.style.marginTop = "2px";
       wrap.appendChild(n);
+      return wrap;
+    }
+    if (fd.t === "choice") {
+      wrap.className = "field";
+      wrap.appendChild(el("label", null, fd.label));
+      var seg = el("div"); seg.className = "seg";
+      fd.choices.forEach(function (c) {
+        var b = el("button", null, c[1]);
+        b.setAttribute("aria-pressed", S[fd.k] === c[0] ? "true" : "false");
+        b.addEventListener("click", function () { S[fd.k] = c[0]; buildRail(); render(); });
+        seg.appendChild(b);
+      });
+      wrap.appendChild(seg);
+      if (fd.hint) { var ch = el("div", null, fd.hint); ch.className = "hint"; wrap.appendChild(ch); }
       return wrap;
     }
     if (fd.t === "font") {
