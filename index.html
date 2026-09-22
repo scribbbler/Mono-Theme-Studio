@@ -418,6 +418,7 @@
     barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
     clockX: 24, clockY: 8, clockSize: 20,
     battRight: 20, battY: 8, battSize: 20, battGap: 6,
+    logoTint: true,
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
@@ -596,12 +597,54 @@
     S[key] = step >= 1 ? Math.round(v) : Math.round(v / step) * step;
   }
 
+
+  var SYSTEM_LOGOS = [];   // [{ id, src }] read from the theme's own system folders
+  function loadSystemLogos(files, rootDir) {
+    var esc = rootDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var re = new RegExp("^" + esc + "/([^/]+)/theme\\.xml$", "i");
+    var found = [];
+    Object.keys(files).forEach(function (k) {
+      var m = k.match(re);
+      if (m) found.push({ id: m[1], path: k });
+    });
+    found = found.slice(0, 12);
+    return Promise.all(found.map(function (f) {
+      return Promise.resolve(files[f.path]()).then(function (bytes) {
+        var d = parseThemeXml(new TextDecoder().decode(bytes));
+        var imgs = d.getElementsByTagName("image"), ref = null;
+        for (var i = 0; i < imgs.length; i++) {
+          if (imgs[i].getAttribute("name") === "logo") {
+            var pe = imgs[i].getElementsByTagName("path");
+            if (pe.length) { ref = pe[0].textContent.trim(); break; }
+          }
+        }
+        if (!ref) return null;
+        var dir = f.path.slice(0, f.path.lastIndexOf("/"));
+        var rp = resolve(files, dir, ref);
+        if (!rp) return null;
+        return Promise.resolve(files[rp]()).then(function (b2) {
+          return { id: f.id, src: bytesToDataURL(b2, mimeOf(rp)) };
+        });
+      }).catch(function () { return null; });
+    })).then(function (list) { return list.filter(Boolean); });
+  }
+
   var imported = null;   // { name, files, doc }
 
   function resolve(files, baseDir, ref) {
     if (!ref) return null;
     var want = ref.replace(/^\.\//, "").replace(/^\//, "").toLowerCase();
-    var cand = (baseDir ? baseDir + "/" : "") + want;
+    // the whole candidate has to be lowercased, prefix included, or the exact
+    // match never fires and every lookup falls back to "first file with that
+    // name anywhere in the theme"
+    var cand = ((baseDir ? baseDir + "/" : "") + want).toLowerCase();
+    // collapse any ../ segments so paths like ../_inc/art.png resolve
+    var parts = cand.split("/"), stack = [];
+    parts.forEach(function (seg) {
+      if (seg === "..") stack.pop();
+      else if (seg && seg !== ".") stack.push(seg);
+    });
+    cand = stack.join("/");
     var keys = Object.keys(files);
     for (var i = 0; i < keys.length; i++) if (keys[i].toLowerCase() === cand) return keys[i];
     for (var j = 0; j < keys.length; j++) if (keys[j].toLowerCase().endsWith("/" + want) || keys[j].toLowerCase() === want) return keys[j];
@@ -655,6 +698,7 @@
 
   function applyDoc(doc, files, baseDir) {
     clamped = [];
+    SYSTEM_LOGOS = [];
     var r = makeReader(doc, baseDir);
     var jobs = [];
 
@@ -683,11 +727,20 @@
     function px(v, axis, key) { if (v != null) setNum(key, v * (axis === "x" ? SW : SH)); }
 
     // ---- palette ----
-    col(r.colour("system", "carousel", null, "selectorColor"), "pill");
+    var selCol = r.colour("system", "carousel", null, "selectorColor");
+    if (selCol) col(selCol, "pill");
+    else S.pillA = 0;   // the engine only draws the pill when the theme asks for one
     var cEnd = r.colour("system", "carousel", null, "selectorColorEnd");
     if (cEnd) { S.pillGrad = true; S.pillEnd = cEnd.hex; S.pillEndA = cEnd.a; } else S.pillGrad = false;
-    col(r.colour("system", "carousel", null, "logoColor"), "text");
-    col(r.colour("system", "carousel", null, "logoSelectedColor"), "pillText");
+    var lCol = r.colour("system", "carousel", null, "logoColor");
+    var lSel = r.colour("system", "carousel", null, "logoSelectedColor");
+    S.logoTint = !!(lCol || lSel);   // unset means the engine leaves art alone
+    if (lCol) col(lCol, "text");
+    if (lSel) col(lSel, "pillText");
+    else if (!S.logoTint) {
+      // row text still needs a colour: take it from the carousel's own text layer
+      col(r.colour("system", "text", "logoText", "color"), "text");
+    }
     col(r.colour("system", "helpsystem", null, "backgroundColor"), "helpPill");
     col(r.colour("system", "helpsystem", null, "textColor"), "helpText");
     col(r.colour("system", "helpsystem", null, "iconColor"), "helpChip");
@@ -851,6 +904,10 @@
         if (/^BPreplay/.test(S[k])) useFont(common, k);   // untouched by the lookups above
       });
     }
+
+    jobs.push(loadSystemLogos(files, baseDir).then(function (list) {
+      if (list.length) { SYSTEM_LOGOS = list; S.carLogos = true; }
+    }));
 
     return Promise.all(jobs).then(function () {
       imported = { name: (baseDir.split("/").pop() || "theme"), files: files, doc: doc,
@@ -1057,19 +1114,24 @@
     }, txt));
   }
 
+  function sysList() {
+    return SYSTEM_LOGOS.length ? SYSTEM_LOGOS.map(function (e) { return e.id; }) : SYSTEMS;
+  }
+
   function drawCarousel(scr) {
     var pitch = S.carHeight / S.carRows;
     var centerSlot = Math.floor((S.carRows - 1) / 2);
     var first, selSlot;
     if (S.listScroll) {
-      var maxCam = Math.max(0, SYSTEMS.length - S.carRows);
+      var maxCam = Math.max(0, names.length - S.carRows);
       var cam = Math.min(Math.max(cursor - centerSlot, 0), maxCam);
       first = cam; selSlot = cursor - cam;
     } else {
       first = cursor - centerSlot; selSlot = centerSlot;
     }
 
-    var selName = SYSTEMS[((cursor % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length];
+    var names = sysList();
+    var selName = names[((cursor % names.length) + names.length) % names.length];
     var pillW = S.carFit
       ? Math.min(textWidth(upper(selName, S.uCar), S.carFont, S.fCar) + S.carPad * 2, S.carPillW)
       : S.carPillW;
@@ -1084,16 +1146,19 @@
 
     for (var slot = 0; slot < S.carRows; slot++) {
       var idx = first + slot;
-      if (S.listScroll && (idx < 0 || idx >= SYSTEMS.length)) continue;
-      var name = SYSTEMS[((idx % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length];
+      if (S.listScroll && (idx < 0 || idx >= names.length)) continue;
+      var ni = ((idx % names.length) + names.length) % names.length;
+      var name = names[ni];
       var isSel = slot === selSlot;
       var y = S.carTop + slot * pitch + (pitch - S.carRowH) / 2;
-      if (S.carLogos && ART.sysLogo) {
+      var perSys = SYSTEM_LOGOS.length ? SYSTEM_LOGOS[ni].src : null;
+      if (S.carLogos && (perSys || ART.sysLogo)) {
         var lg = tinted({
           left: S.carIndent + "px", top: y + "px",
           width: S.carLogoW + "px", height: S.carLogoH + "px",
           webkitMaskPosition: "left center"
-        }, ART.sysLogo.src, isSel ? css("pillText") : css("text"));
+        }, perSys || ART.sysLogo.src,
+           S.logoTint ? (isSel ? css("pillText") : css("text")) : "#FFFFFF");
         lg.style.backgroundPosition = "left center";
         scr.appendChild(lg);
       } else {
@@ -1829,6 +1894,7 @@
       { k: "uCar", t: "bool", label: "Uppercase names" },
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
       { k: "carLogos", t: "bool", label: "Use system logos", hint: "When a logo image exists for a system, ES draws it instead of the name." },
+      { k: "logoTint", t: "bool", label: "Tint logos to the row colour", hint: "Off leaves full-colour logos alone, which is what the engine does when the theme sets no logo colours." },
       { k: "carLogoW", t: "num", label: "Logo box width", min: 80, max: 620, step: 10, unit: "px" },
       { k: "carLogoH", t: "num", label: "Logo box height", min: 30, max: 120, step: 2, unit: "px" }
     ].concat(artFields(["sysLogo"])).concat([
@@ -2100,7 +2166,7 @@
   }
 
   function move(d) {
-    if (page === "carousel") cursor = Math.min(Math.max(cursor + d, 0), SYSTEMS.length - 1);
+    if (page === "carousel") cursor = Math.min(Math.max(cursor + d, 0), sysList().length - 1);
     else if (page === "gamelist") glCursor = Math.min(Math.max(glCursor + d, 0), 6);
     else if (page === "menu") menuCursor = Math.min(Math.max(menuCursor + d, 0), MENU_ROWS.length - 1);
     else if (page === "keyboard") kbFocus[0] = Math.min(Math.max(kbFocus[0] + d, 0), KB_ROWS.length - 1);
@@ -2143,7 +2209,7 @@
         else if (page === "menu" || page === "keyboard") page = "carousel";
         break;
       case "x":
-        if (page === "carousel") cursor = (cursor + 3) % SYSTEMS.length;
+        if (page === "carousel") cursor = (cursor + 3) % sysList().length;
         else if (page === "gamelist") glCursor = (glCursor + 3) % 7;
         render(); return;
       case "y":
