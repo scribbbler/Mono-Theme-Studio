@@ -156,6 +156,9 @@
     border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
   }
   .screen * { position: absolute; }
+  .hit { transition: background .12s ease; }
+  .hit:hover { background: color-mix(in srgb, var(--accent) 22%, transparent) !important; }
+  .hit:active { background: color-mix(in srgb, var(--accent) 40%, transparent) !important; }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--muted); text-align: center; }
   .legend b { color: var(--ink); font-weight: 600; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -722,7 +725,7 @@
     var pitch = 38, rowH = 36, top = 47;
     for (var i = 0; i < MENU_ROWS.length; i++) {
       var y = top + i * pitch;
-      if (i === 0) {
+      if (i === menuCursor) {
         scr.appendChild(el("div", {
           left: "10px", top: y + "px", width: "620px", height: rowH + "px",
           background: pillBg(), borderRadius: "18px"
@@ -731,7 +734,7 @@
       scr.appendChild(el("div", {
         left: "22px", top: y + "px", height: rowH + "px", width: "580px",
         display: "flex", alignItems: "center",
-        font: fontCss(S.menuFont, S.fMenu), color: i === 0 ? css("pillText") : css("text"),
+        font: fontCss(S.menuFont, S.fMenu), color: i === menuCursor ? css("pillText") : css("text"),
         whiteSpace: "nowrap"
       }, MENU_ROWS[i].toUpperCase()));
       if (ART.arrow) {
@@ -741,7 +744,7 @@
       } else {
         scr.appendChild(el("div", {
           left: "600px", top: y + "px", height: rowH + "px", display: "flex", alignItems: "center",
-          font: fontCss(22, S.fMenu), color: i === 0 ? css("pillText") : css("text")
+          font: fontCss(22, S.fMenu), color: i === menuCursor ? css("pillText") : css("text")
         }, "›"));
       }
     }
@@ -757,6 +760,7 @@
     "1":"!","2":"@","3":"#","4":"$","5":"%","6":"^","7":"&","8":"*","9":"(","0":")","-":"_","=":"+",
     "[":"{","]":"}","\\":"|",";":":","'":"\"",",":"<",".":">","/":"?"
   };
+  var menuCursor = 0;
   var kbFocus = [1, 3];   // row, col of the focused key
   var kbPressed = false;
 
@@ -1606,20 +1610,85 @@
       tabs.appendChild(kbNav);
       return;
     }
-    if (page === "saver" || page === "popup") return;
-    var nav = el("div", { display: "flex", gap: "6px", marginLeft: "12px" });
-    var up = el("button", null, "▲"); up.className = "btn"; up.title = "Move selection up";
-    var dn = el("button", null, "▼"); dn.className = "btn"; dn.title = "Move selection down";
-    up.addEventListener("click", function () { move(-1); });
-    dn.addEventListener("click", function () { move(1); });
-    nav.appendChild(up); nav.appendChild(dn);
-    tabs.appendChild(nav);
+    return;
   }
 
   function move(d) {
     if (page === "carousel") cursor = Math.min(Math.max(cursor + d, 0), SYSTEMS.length - 1);
     else if (page === "gamelist") glCursor = Math.min(Math.max(glCursor + d, 0), 6);
+    else if (page === "menu") menuCursor = Math.min(Math.max(menuCursor + d, 0), MENU_ROWS.length - 1);
+    else if (page === "keyboard") kbFocus[0] = Math.min(Math.max(kbFocus[0] + d, 0), KB_ROWS.length - 1);
     render();
+  }
+
+  // The wireframe's controls behave the way the device does, so the preview
+  // can be walked instead of jumped between with tabs.
+  var HITS = [
+    { k: "up",     x: 218, y: 684, w: 62, h: 52, label: "D-pad up" },
+    { k: "down",   x: 218, y: 784, w: 62, h: 52, label: "D-pad down" },
+    { k: "left",   x: 154, y: 734, w: 52, h: 52, label: "D-pad left" },
+    { k: "right",  x: 290, y: 734, w: 52, h: 52, label: "D-pad right" },
+    { k: "x",      x: 590, y: 656, w: 60, h: 60, label: "X" },
+    { k: "y",      x: 526, y: 720, w: 60, h: 60, label: "Y" },
+    { k: "a",      x: 654, y: 720, w: 60, h: 60, label: "A" },
+    { k: "b",      x: 590, y: 784, w: 60, h: 60, label: "B" },
+    { k: "menu",   x: 384, y: 674, w: 52, h: 52, label: "Menu" },
+    { k: "select", x: 312, y: 872, w: 92, h: 48, label: "Select" },
+    { k: "start",  x: 424, y: 872, w: 92, h: 48, label: "Start" }
+  ];
+
+  function press(k) {
+    if (page === "saver" || page === "popup") { page = "carousel"; buildTabs(); buildRail(); render(); return; }
+    switch (k) {
+      case "up": move(-1); return;
+      case "down": move(1); return;
+      case "left":
+        if (page === "keyboard") { kbFocus[1] = Math.max(kbFocus[1] - 1, 0); render(); }
+        return;
+      case "right":
+        if (page === "keyboard") { kbFocus[1] = Math.min(kbFocus[1] + 1, 12); render(); }
+        return;
+      case "a":
+        if (page === "carousel") page = "gamelist";
+        else if (page === "keyboard") { kbPressed = true; render(); setTimeout(function () { kbPressed = false; render(); }, S.kbFlash); return; }
+        break;
+      case "b":
+        if (page === "gamelist") page = "carousel";
+        else if (page === "menu" || page === "keyboard") page = "carousel";
+        break;
+      case "x":
+        if (page === "carousel") cursor = (cursor + 3) % SYSTEMS.length;
+        else if (page === "gamelist") glCursor = (glCursor + 3) % 7;
+        render(); return;
+      case "y":
+        if (page === "carousel") page = "keyboard";
+        else { render(); return; }
+        break;
+      case "select":
+        page = page === "carousel" ? "saver" : "popup";
+        break;
+      case "menu":
+      case "start":
+        page = page === "menu" ? "carousel" : "menu";
+        break;
+    }
+    buildTabs(); buildRail(); render();
+  }
+
+  function buildPad() {
+    var box = document.getElementById("console");
+    HITS.forEach(function (h) {
+      var b = el("button", {
+        left: h.x + "px", top: h.y + "px", width: h.w + "px", height: h.h + "px",
+        position: "absolute", background: "transparent", border: "0", padding: "0",
+        borderRadius: "50%", cursor: "pointer"
+      });
+      b.className = "hit";
+      b.title = h.label;
+      b.setAttribute("aria-label", h.label);
+      b.addEventListener("click", function () { press(h.k); });
+      box.appendChild(b);
+    });
   }
 
   function buildPresets() {
@@ -1683,6 +1752,7 @@
   if (/sheet/i.test(location.hash)) setSheet(true);
 
   if (/general/i.test(location.hash)) railMode = "general";
+  buildPad();
   buildPresets(); buildRail(); buildTabs(); render();
   // register the bundled faces, then redraw so measurements use real metrics
   Promise.all(FONT_LIB.map(registerFont)).then(function () { render(); });

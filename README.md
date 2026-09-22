@@ -22,7 +22,11 @@ appear on the device, in the real font.
 ## What you can design
 
 **Six screens**, each previewed live: carousel, gamelist, menu, on-screen
-keyboard, screensaver clock, and the volume/brightness pop-up.
+keyboard, screensaver clock, and the volume/brightness pop-up. **The mockup's
+own buttons work** — press A on the carousel to open a gamelist, B to go back,
+Y to reach the search keyboard, Select for the clock screensaver, Start for the
+menu, and the d-pad to move the selection. It navigates the way the device does,
+so you can walk a theme instead of inspecting it screen by screen.
 
 - **Colour and opacity per layer** — every colour has an opacity slider, because
   the engine expresses opacity as the alpha byte of the colour.
