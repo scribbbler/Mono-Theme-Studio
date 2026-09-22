@@ -40,6 +40,10 @@ keyboard, screensaver clock, and the volume/brightness pop-up.
 - **Screen overlay** — a full-screen PNG over the whole interface (scanlines,
   LCD grid, dot matrix) with opacity and pixelated scaling, exported as a high
   z-index extra image.
+- **System logos and game art** — switch the carousel from names to per-system
+  logo images (`system/<id>.png`) with a logo box you can size, and place
+  scraped game art beside the gamelist as the detailed view does. Load a sample
+  image to see either in place.
 
 The five **Mono** themes load as presets, so you can start from one and adjust.
 

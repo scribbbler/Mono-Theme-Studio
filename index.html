@@ -350,6 +350,8 @@
     fPop: "BPreplay-Bold.otf",
     pillGrad: false, pillEnd: "#1257C9",
     ovShow: true, ovOpacity: 100, ovBlend: "normal", ovPixel: true,
+    carLogos: false, carLogoW: 320, carLogoH: 72,
+    glArt: false, artX: 360, artY: 96, artW: 260, artH: 200,
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
     helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100
   };
@@ -378,7 +380,9 @@
     { k: "ssBattIcon", label: "Screensaver battery", path: "./art/icons/battery.svg" },
     { k: "popVolume", label: "Volume pop-up", path: "./art/icons/volume.svg" },
     { k: "popBright", label: "Brightness pop-up", path: "./art/icons/brightness.svg" },
-    { k: "overlay", label: "Screen overlay PNG", path: "./art/overlay.png" }
+    { k: "overlay", label: "Screen overlay PNG", path: "./art/overlay.png" },
+    { k: "sysLogo", label: "System logo", path: "./system/${system.theme}.png" },
+    { k: "gameArt", label: "Game art (sample)", path: "", noPath: true }
   ];
   var ART = {};   // k -> { src, name }
   var PATHS = {}; // k -> path string written into theme.xml
@@ -594,16 +598,40 @@
       var name = SYSTEMS[((idx % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length];
       var isSel = slot === selSlot;
       var y = S.carTop + slot * pitch + (pitch - S.carRowH) / 2;
-      scr.appendChild(el("div", {
-        left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
-        width: (SW - S.carIndent) + "px", display: "flex", alignItems: "center",
-        font: fontCss(S.carFont, S.fCar),
-        color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
-      }, upper(name, S.uCar)));
+      if (S.carLogos && ART.sysLogo) {
+        var lg = el("img", {
+          left: S.carIndent + "px", top: y + "px",
+          maxWidth: S.carLogoW + "px", maxHeight: S.carLogoH + "px",
+          height: S.carLogoH + "px", width: "auto", objectFit: "contain", objectPosition: "left center"
+        });
+        lg.src = ART.sysLogo.src; lg.alt = name;
+        scr.appendChild(lg);
+      } else {
+        scr.appendChild(el("div", {
+          left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
+          width: (SW - S.carIndent) + "px", display: "flex", alignItems: "center",
+          font: fontCss(S.carFont, S.fCar),
+          color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
+        }, upper(name, S.uCar)));
+      }
     }
   }
 
   function drawGamelist(scr) {
+    if (S.glArt) {
+      var box = el("div", {
+        left: S.artX + "px", top: S.artY + "px", width: S.artW + "px", height: S.artH + "px",
+        border: ART.gameArt ? "0" : ("2px dashed " + css("text")), opacity: ART.gameArt ? "1" : ".45",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        font: fontCss(14, S.fGl), color: css("text"), overflow: "hidden"
+      }, ART.gameArt ? "" : "game art");
+      if (ART.gameArt) {
+        var gi = el("img", { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "contain" });
+        gi.src = ART.gameArt.src; gi.alt = "";
+        box.appendChild(gi);
+      }
+      scr.appendChild(box);
+    }
     var rows = Math.floor((SH - 48 - 60) / S.glPitch);
     for (var i = 0; i < rows; i++) {
       var name = GAMES[i % GAMES.length];
@@ -921,11 +949,19 @@
     x.push('\t<origin>0 0</origin><pos>0 0</pos><size>1 1</size><zIndex>0</zIndex>');
     x.push('    </image>');
     x.push('    <sound name="directory"><path>./music/</path></sound>');
+    if (S.carLogos) {
+      x.push('    <image name="logo">');
+      x.push('\t<path>' + PATHS.sysLogo + '</path><!-- one file per system id -->');
+      x.push('    </image>');
+    }
     x.push('    <carousel name="systemcarousel">');
     x.push('\t<origin>0 0</origin>');
     x.push('\t<type>vertical</type>');
     x.push('\t<color>00000000</color>');
-    x.push('\t<logoSize>' + f(S.carIndent * 10 / SW, 6) + ' ' + f(S.carRowH / SH, 6) + '</logoSize><!-- text indent = ' + S.carIndent + 'px, row ' + S.carRowH + 'px -->');
+    if (S.carLogos)
+      x.push('\t<logoSize>' + f(S.carLogoW / SW, 6) + ' ' + f(S.carLogoH / SH, 6) + '</logoSize><!-- logo box ' + S.carLogoW + 'x' + S.carLogoH + 'px; indent = ' + (S.carLogoW / 10) + 'px -->');
+    else
+      x.push('\t<logoSize>' + f(S.carIndent * 10 / SW, 6) + ' ' + f(S.carRowH / SH, 6) + '</logoSize><!-- text indent = ' + S.carIndent + 'px, row ' + S.carRowH + 'px -->');
     x.push('\t<logoScale>1.0</logoScale>');
     x.push('\t<maxLogoCount>' + S.carRows + '</maxLogoCount>');
     x.push('\t<logoAlignment>left</logoAlignment>');
@@ -1008,6 +1044,13 @@
     x.push('         <selectorRadius>' + f(S.glRadius / SH, 6) + '</selectorRadius><!-- ' + S.glRadius + 'px -->');
     x.push('\t<scrollSound>./audio/move.wav</scrollSound>');
     x.push('    </textlist>');
+    if (S.glArt) {
+      x.push('    <image name="md_image"><!-- scraped art; detailed / video views -->');
+      x.push('\t<pos>' + f(S.artX / SW, 6) + ' ' + f(S.artY / SH, 6) + '</pos>');
+      x.push('\t<size>' + f(S.artW / SW, 6) + ' ' + f(S.artH / SH, 6) + '</size>');
+      x.push('\t<origin>0 0</origin>');
+      x.push('    </image>');
+    }
     if (ART.overlay || S.ovShow) {
       x.push('    <image name="screenOverlay" extra="true"><!-- drawn above the list -->');
       x.push('\t<path>' + PATHS.overlay + '</path>');
@@ -1191,8 +1234,13 @@
       { k: "carFont", t: "num", label: "Name size", min: 18, max: 60, step: 1, unit: "px" },
       { k: "fCar", t: "font", label: "Name font" },
       { k: "uCar", t: "bool", label: "Uppercase names" },
-      { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 }
-    ]}],
+      { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
+      { k: "carLogos", t: "bool", label: "Use system logos", hint: "When a logo image exists for a system, ES draws it instead of the name." },
+      { k: "carLogoW", t: "num", label: "Logo box width", min: 80, max: 620, step: 10, unit: "px" },
+      { k: "carLogoH", t: "num", label: "Logo box height", min: 30, max: 120, step: 2, unit: "px" }
+    ].concat(artFields(["sysLogo"])).concat([
+      { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). The engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
+    ]) }],
     gamelist: [{ name: "Gamelist", open: true, fields: [
       { k: "glFit", t: "bool", label: "Pill hugs the name" },
       { k: "glTop", t: "num", label: "List top", min: 44, max: 140, step: 1, unit: "px" },
@@ -1207,8 +1255,15 @@
       { k: "fGl", t: "font", label: "Game name font" },
       { k: "uGl", t: "bool", label: "Uppercase game names" },
       { k: "fGlHead", t: "font", label: "System title font" },
-      { k: "uGlHead", t: "bool", label: "Uppercase system title" }
-    ]}],
+      { k: "uGlHead", t: "bool", label: "Uppercase system title" },
+      { k: "glArt", t: "bool", label: "Show game art", hint: "The detailed view puts scraped art beside the list — narrow the list width to make room." },
+      { k: "artX", t: "num", label: "Art left", min: 0, max: 600, step: 2, unit: "px" },
+      { k: "artY", t: "num", label: "Art top", min: 44, max: 400, step: 2, unit: "px" },
+      { k: "artW", t: "num", label: "Art width", min: 60, max: 400, step: 2, unit: "px" },
+      { k: "artH", t: "num", label: "Art height", min: 60, max: 360, step: 2, unit: "px" }
+    ].concat(artFields(["gameArt"])).concat([
+      { t: "note", label: "Game art comes from each game's scraped image, so the theme sets only its position and size — the file you load here is just a stand-in for the preview." }
+    ]) }],
     menu: [{ name: "Menu", open: true, fields: [
       { k: "menuFont", t: "num", label: "Row size", min: 14, max: 32, step: 1, unit: "px" },
       { k: "fMenu", t: "font", label: "Row font" },
@@ -1353,7 +1408,9 @@
       clear.addEventListener("click", function () {
         delete ART[fd.k]; status.textContent = "default"; clear.style.display = "none"; render();
       });
+      var isSample = ICONS.filter(function (i) { return i.k === fd.k; })[0].noPath;
       var pathIn = el("input"); pathIn.type = "text"; pathIn.value = PATHS[fd.k];
+      if (isSample) pathIn.style.display = "none";
       pathIn.style.cssText = "flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);";
       pathIn.addEventListener("change", function () { PATHS[fd.k] = pathIn.value.trim() || PATHS[fd.k]; renderXML(); });
       row0.appendChild(pick); row0.appendChild(clear);
