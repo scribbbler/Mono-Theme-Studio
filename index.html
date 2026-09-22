@@ -924,13 +924,29 @@
   }
 
 
+  // The engine multiplies art by the tint colour. Multiplying by white is the
+  // identity, so a full-colour PNG logo keeps its colours; a monochrome icon
+  // becomes the tint. Reproduced here with a multiply layer clipped to the
+  // art's own alpha, isolated so it blends with the art and nothing behind it.
+  function isWhite(c) {
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+    if (!m) return /^#?(fff|ffffff)$/i.test(c);
+    return +m[1] > 250 && +m[2] > 250 && +m[3] > 250;
+  }
   function tinted(style, src, colour) {
     var d = el("div", style);
-    d.style.background = colour;
-    d.style.webkitMaskImage = d.style.maskImage = "url(" + src + ")";
-    d.style.webkitMaskRepeat = d.style.maskRepeat = "no-repeat";
-    d.style.webkitMaskPosition = d.style.maskPosition = "center";
-    d.style.webkitMaskSize = d.style.maskSize = "contain";
+    d.style.background = "center/contain no-repeat url(" + src + ")";
+    if (isWhite(colour)) return d;
+    d.style.isolation = "isolate";
+    var ov = el("div", {
+      position: "absolute", left: "0", top: "0", right: "0", bottom: "0",
+      background: colour, mixBlendMode: "multiply"
+    });
+    ov.style.webkitMaskImage = ov.style.maskImage = "url(" + src + ")";
+    ov.style.webkitMaskRepeat = ov.style.maskRepeat = "no-repeat";
+    ov.style.webkitMaskPosition = ov.style.maskPosition = style.webkitMaskPosition || "center";
+    ov.style.webkitMaskSize = ov.style.maskSize = "contain";
+    d.appendChild(ov);
     return d;
   }
 
@@ -1075,9 +1091,10 @@
       if (S.carLogos && ART.sysLogo) {
         var lg = tinted({
           left: S.carIndent + "px", top: y + "px",
-          width: S.carLogoW + "px", height: S.carLogoH + "px"
+          width: S.carLogoW + "px", height: S.carLogoH + "px",
+          webkitMaskPosition: "left center"
         }, ART.sysLogo.src, isSel ? css("pillText") : css("text"));
-        lg.style.webkitMaskPosition = lg.style.maskPosition = "left center";
+        lg.style.backgroundPosition = "left center";
         scr.appendChild(lg);
       } else {
         scr.appendChild(el("div", {
