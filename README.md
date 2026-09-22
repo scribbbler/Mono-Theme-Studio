@@ -90,8 +90,10 @@ anything exotic in an imported file is not preserved.
 
 ## Accuracy, and its limits
 
-The preview is arithmetic from the same formulas the engine uses, and it draws
-with the real BPreplay faces, so text measures as it will on the device. Two
+The preview is arithmetic from the same formulas the engine uses, it draws with
+the real fonts, and icons are tinted through their own alpha the way the engine
+tints them — so a white logo lands black on a light selection pill here exactly
+as it does on the device. Two
 things are deliberately shown as fixed because the theme cannot change them:
 **menu row pitch and pill width**, and the **hint-bar labels**, which come from
 the build. A few values (row pitch from line spacing) are derived from font

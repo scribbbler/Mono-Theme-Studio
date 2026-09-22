@@ -923,6 +923,17 @@
     return hex(S[key]) + (a.length < 2 ? "0" + a : a);
   }
 
+
+  function tinted(style, src, colour) {
+    var d = el("div", style);
+    d.style.background = colour;
+    d.style.webkitMaskImage = d.style.maskImage = "url(" + src + ")";
+    d.style.webkitMaskRepeat = d.style.maskRepeat = "no-repeat";
+    d.style.webkitMaskPosition = d.style.maskPosition = "center";
+    d.style.webkitMaskSize = d.style.maskSize = "contain";
+    return d;
+  }
+
   function pillBg() {
     return S.pillGrad ? "linear-gradient(180deg, " + css("pill") + " 0%, " + css("pillEnd") + " 100%)" : css("pill");
   }
@@ -958,9 +969,8 @@
       font: fontCss(S.battSize, S.fBatt), color: css("text")
     });
     if (ART.battery) {
-      var bimg = el("img", { position: "relative", width: "32px", height: "32px", objectFit: "contain" });
-      bimg.src = ART.battery.src; bimg.alt = "";
-      batt.appendChild(bimg);
+      batt.appendChild(tinted({ position: "relative", width: "32px", height: "32px" },
+        ART.battery.src, css("text")));
     } else {
       var icon = el("div", {
         position: "relative", width: "29px", height: "16px", border: "2px solid " + css("text"),
@@ -979,10 +989,8 @@
     var art = ART["btn" + letter];
     var circle;
     if (art) {
-      circle = el("div", { position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px" });
-      var im = el("img", { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "contain" });
-      im.src = art.src; im.alt = letter;
-      circle.appendChild(im);
+      circle = tinted({ position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px" },
+        art.src, css("helpChip"));
     } else {
       circle = el("div", {
         position: "relative", width: S.helpIcon + "px", height: S.helpIcon + "px", borderRadius: "50%",
@@ -1065,12 +1073,11 @@
       var isSel = slot === selSlot;
       var y = S.carTop + slot * pitch + (pitch - S.carRowH) / 2;
       if (S.carLogos && ART.sysLogo) {
-        var lg = el("img", {
+        var lg = tinted({
           left: S.carIndent + "px", top: y + "px",
-          maxWidth: S.carLogoW + "px", maxHeight: S.carLogoH + "px",
-          height: S.carLogoH + "px", width: "auto", objectFit: "contain", objectPosition: "left center"
-        });
-        lg.src = ART.sysLogo.src; lg.alt = name;
+          width: S.carLogoW + "px", height: S.carLogoH + "px"
+        }, ART.sysLogo.src, isSel ? css("pillText") : css("text"));
+        lg.style.webkitMaskPosition = lg.style.maskPosition = "left center";
         scr.appendChild(lg);
       } else {
         scr.appendChild(el("div", {
@@ -1140,9 +1147,8 @@
         whiteSpace: "nowrap"
       }, MENU_ROWS[i].toUpperCase()));
       if (ART.arrow) {
-        var ai = el("img", { left: "598px", top: (y + (rowH - 24) / 2) + "px", width: "24px", height: "24px", objectFit: "contain" });
-        ai.src = ART.arrow.src; ai.alt = "";
-        scr.appendChild(ai);
+        scr.appendChild(tinted({ left: "598px", top: (y + (rowH - 24) / 2) + "px", width: "24px", height: "24px" },
+          ART.arrow.src, i === menuCursor ? css("pillText") : css("text")));
       } else {
         scr.appendChild(el("div", {
           left: "600px", top: y + "px", height: rowH + "px", display: "flex", alignItems: "center",
@@ -1211,12 +1217,10 @@
         var iconKey = label === "DEL" ? "kbBackspace" : label === "OK" ? "kbEnter"
           : label === "SHIFT" ? (S.kbShift ? "kbShiftOn" : "kbShiftIcon") : null;
         if (iconKey && ART[iconKey]) {
-          var im = el("img", {
+          scr.appendChild(tinted({
             left: (x + (w - S.kbIcon) / 2) + "px", top: (y + (keyH - S.kbIcon) / 2) + "px",
-            width: S.kbIcon + "px", height: S.kbIcon + "px", objectFit: "contain"
-          });
-          im.src = ART[iconKey].src; im.alt = label;
-          scr.appendChild(im);
+            width: S.kbIcon + "px", height: S.kbIcon + "px"
+          }, ART[iconKey].src, ink));
         } else {
           var glyph = label;
           if (label === "DEL") glyph = "⌫";
@@ -1260,9 +1264,8 @@
   function drawSaver(scr) {
     var cx = SW / 2;
     if (S.ssLock && ART.ssLockIcon) {
-      var li = el("img", { left: (cx - 16) + "px", top: "96px", width: "32px", height: "32px", objectFit: "contain" });
-      li.src = ART.ssLockIcon.src; li.alt = "";
-      scr.appendChild(li);
+      scr.appendChild(tinted({ left: (cx - 16) + "px", top: "96px", width: "32px", height: "32px" },
+        ART.ssLockIcon.src, css("text")));
     } else if (S.ssLock) {
       scr.appendChild(el("div", {
         left: "0px", top: "96px", width: SW + "px", textAlign: "center",
@@ -1281,9 +1284,8 @@
       font: fontCss(subSize, S.fSaver), color: css("text")
     });
     if (S.ssCharge && ART.ssBattIcon) {
-      var bi = el("img", { position: "relative", width: subSize + "px", height: subSize + "px", objectFit: "contain" });
-      bi.src = ART.ssBattIcon.src; bi.alt = "";
-      row.appendChild(bi);
+      row.appendChild(tinted({ position: "relative", width: subSize + "px", height: subSize + "px" },
+        ART.ssBattIcon.src, css("text")));
     }
     row.appendChild(el("span", { position: "relative" }, sub));
     scr.appendChild(row);
@@ -1299,12 +1301,10 @@
     }));
     var iconBox = 40, pad = 24;
     if (ART.popVolume) {
-      var vi = el("img", {
+      scr.appendChild(tinted({
         left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px",
-        width: iconBox + "px", height: iconBox + "px", objectFit: "contain"
-      });
-      vi.src = ART.popVolume.src; vi.alt = "";
-      scr.appendChild(vi);
+        width: iconBox + "px", height: iconBox + "px"
+      }, ART.popVolume.src, css("text")));
     } else {
       scr.appendChild(el("div", {
         left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px", width: iconBox + "px",
