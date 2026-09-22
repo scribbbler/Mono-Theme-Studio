@@ -62,6 +62,16 @@ for the preview, and its background art shows behind the mock-up. Zips are read
 in the browser with no library — the central directory is walked by hand and
 entries inflated with `DecompressionStream`.
 
+![An imported theme previewing with its own art and font](docs/screenshot-import.png)
+
+Real themes vary a lot, so the importer is deliberately forgiving: it follows
+`<include>` files, accepts an XML declaration that sits after a comment (which
+the device's parser tolerates and some published themes rely on), takes the last
+definition when a property is set more than once, ignores values that aren't
+numbers or valid hex, and falls back to the typeface the theme uses most when a
+text layer is named something it doesn't recognise. Values outside this tool's
+slider ranges are clamped, and it tells you how many.
+
 ## Using what it produces
 
 **Download .zip** gives you a whole theme folder: the edited `theme.xml` plus
