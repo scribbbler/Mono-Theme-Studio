@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mono Theme Studio</title>
 <style>
   @font-face {
@@ -207,7 +208,7 @@
     .legend { font-size: 11px; order: -1; opacity: .9; }
 
     /* controls ride up from the bottom */
-    :root { --peek: 76px; }
+    :root { --peek: calc(76px + env(safe-area-inset-bottom, 0px)); }
     .rail {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
       max-height: 82dvh; display: flex; flex-direction: column;
@@ -216,13 +217,13 @@
       box-shadow: 0 -8px 30px rgba(0, 0, 0, .28);
       transform: translateY(calc(100% - var(--peek)));
       transition: transform .22s cubic-bezier(.32, .72, 0, 1);
-      touch-action: none;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .rail.open { transform: translateY(0); }
     #railbody { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
     .grabber {
       display: block; width: 100%; border: 0; background: none; cursor: grab;
-      padding: 10px 0 6px; flex: 0 0 auto;
+      padding: 10px 0 6px; flex: 0 0 auto; touch-action: none;
     }
     .grabber::before {
       content: ""; display: block; width: 42px; height: 4px; margin: 0 auto;
