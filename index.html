@@ -418,7 +418,8 @@
     barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
     clockX: 24, clockY: 8, clockSize: 20,
     battRight: 20, battY: 8, battSize: 20, battGap: 6,
-    logoTint: true, helpPillOn: true,
+    logoTint: true, helpPillOn: true, stockFade: false, stockPrompts: false,
+    logoScale: 1, stockBatteryFont: false,
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
@@ -743,6 +744,8 @@
     }
     var helpBg = r.colour("system", "helpsystem", null, "backgroundColor");
     S.helpPillOn = !!helpBg;      // stock ES draws no pill behind the hints
+    S.stockFade = true;           // stock dims the unselected entries
+    S.stockPrompts = true;        // and its views decide which buttons show
     if (helpBg) col(helpBg, "helpPill");
     col(r.colour("system", "helpsystem", null, "textColor"), "helpText");
     col(r.colour("system", "helpsystem", null, "iconColor"), "helpChip");
@@ -757,10 +760,14 @@
     var logoSize = r.pair("system", "carousel", null, "logoSize");
     if (logoSize) { setNum("carRowH", logoSize[1] * SH); setNum("carIndent", logoSize[0] * SW / 10); setNum("carLogoW", logoSize[0] * SW); setNum("carLogoH", logoSize[1] * SH); }
     px(r.num("system", "carousel", null, "selectorHeight"), "y", "carPillH");
-    px(r.num("system", "carousel", null, "selectorRadius"), "y", "carRadius");
+    var crad = r.num("system", "carousel", null, "selectorRadius");
+    setNum("carRadius", crad != null ? crad * SH : 0);
     px(r.num("system", "carousel", null, "selectorWidth"), "x", "carPillW");
     px(r.num("system", "carousel", null, "selectorPadding"), "y", "carPad");
-    setNum("carRows", r.num("system", "carousel", null, "maxLogoCount"));
+    var mlc = r.num("system", "carousel", null, "maxLogoCount");
+    setNum("carRows", mlc != null ? mlc : 3);        // stock default is 3
+    var lsc2 = r.num("system", "carousel", null, "logoScale");
+    S.logoScale = (lsc2 != null && isFinite(lsc2)) ? Math.min(Math.max(lsc2, 1), 2) : 1.2;
     S.carFit = (r.prop("system", "carousel", null, "selectorFitContent") || "") === "true";
     S.listScroll = (r.prop("system", "carousel", null, "listScroll") || "") === "true";
     var siVis = r.prop("system", "text", "systemInfo", "visible");
@@ -787,7 +794,8 @@
     var gf = r.num("basic", "textlist", "gamelist", "fontSize");
     if (gf) setNum("glFont", gf * SH * BOOST);
     px(r.num("basic", "textlist", "gamelist", "selectorHeight"), "y", "glPillH");
-    px(r.num("basic", "textlist", "gamelist", "selectorRadius"), "y", "glRadius");
+    var grad = r.num("basic", "textlist", "gamelist", "selectorRadius");
+    setNum("glRadius", grad != null ? grad * SH : 0);   // stock draws a square bar
     px(r.num("basic", "textlist", "gamelist", "horizontalMargin"), "x", "glInset");
     var ls = r.num("basic", "textlist", "gamelist", "lineSpacing");
     if (ls) setNum("glPitch", ls * glyphBox(S.glFont, S.fGl));
@@ -811,7 +819,9 @@
     var bf = r.num("screen", "batteryIndicator", null, "fontSize");
     if (bf) setNum("battSize", bf * SH * BOOST);
     px(r.num("screen", "batteryIndicator", null, "itemSpacing"), "x", "battGap");
-    useFont(r.prop("screen", "batteryIndicator", null, "fontPath"), "fBatt");
+    var battFont = r.prop("screen", "batteryIndicator", null, "fontPath");
+    S.stockBatteryFont = !battFont;    // stock cannot theme the battery font
+    useFont(battFont, "fBatt");
     useArt(r.prop("screen", "batteryIndicator", null, "full"), "battery");
     var barBg = r.colour("screen", "text", "clock", "backgroundColor");
     if (barBg) { S.barBgOn = true; S.barBg = barBg.hex; S.barBgA = barBg.a;
@@ -1047,7 +1057,7 @@
     var batt = el("div", {
       left: "0px", top: S.battY + "px", width: (SW - S.battRight) + "px", height: "32px",
       display: "flex", alignItems: "center", justifyContent: "flex-end", gap: S.battGap + "px",
-      font: fontCss(S.battSize, S.fBatt), color: css("text")
+      font: fontCss(S.battSize, S.stockBatteryFont ? S.fHelp : S.fBatt), color: css("text")
     });
     if (ART.battery) {
       batt.appendChild(tinted({ position: "relative", width: "32px", height: "32px" },
@@ -1089,11 +1099,21 @@
 
   function drawHelp(scr) {
     if (!S.helpShow) return;
-    var groups = page === "carousel"
-      ? [[["X", "Random"], ["Y", "Search"]], [["A", "Open"]]]
-      : page === "gamelist"
-        ? [[["X", "Random"], ["Y", "Favorite"]], [["B", "Back"], ["A", "Launch"]]]
-        : [[["B", "Back"]], [["A", "Select"]]];
+    var groups;
+    if (S.stockPrompts) {
+      // one row, as the stock views emit them — a theme cannot drop any
+      groups = page === "carousel"
+        ? [[["↕", "Choose"], ["A", "Select"], ["X", "Random"], ["Y", "Search"], ["\u2299", "Clock"]]]
+        : page === "gamelist"
+          ? [[["↔", "System"], ["↕", "Choose"], ["A", "Launch"], ["B", "Back"], ["X", "Random"], ["\u2299", "Options"]]]
+          : [[["↕", "Choose"], ["A", "Select"], ["B", "Back"]]];
+    } else {
+      groups = page === "carousel"
+        ? [[["X", "Random"], ["Y", "Search"]], [["A", "Open"]]]
+        : page === "gamelist"
+          ? [[["X", "Random"], ["Y", "Favorite"]], [["B", "Back"], ["A", "Launch"]]]
+          : [[["B", "Back"]], [["A", "Select"]]];
+    }
     var pillH = S.helpIcon + S.helpPadY * 2;
     var top = SH - 8 - pillH;
 
@@ -1106,7 +1126,26 @@
         borderRadius: S.helpPillOn ? (pillH / 2) + "px" : "0"
       });
       g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
-      if (gi === 0) box.style.left = (S.helpMargin - S.helpPadX) + "px";
+      if (S.stockPrompts) {
+        box.style.left = S.helpMargin + "px";
+        box.style.width = (SW - S.helpMargin * 2) + "px";
+        box.style.gap = "10px";
+        box.style.justifyContent = "space-between";
+        box.style.overflow = "hidden";
+        // a long stock prompt row is scaled down to fit rather than clipped
+        requestAnimationFrame(function () {
+          var need = 0;
+          [].slice.call(box.children).forEach(function (c) { need += c.getBoundingClientRect().width; });
+          var zoom = parseFloat(document.getElementById("console").style.transform.replace(/.*scale\(([^)]+)\).*/, "$1")) || 1;
+          need = need / zoom + 10 * (box.children.length - 1);
+          var avail = SW - S.helpMargin * 2;
+          if (need > avail) {
+            box.style.transform = "scale(" + (avail / need) + ")";
+            box.style.transformOrigin = "left center";
+            box.style.width = need + "px";
+          }
+        });
+      } else if (gi === 0) box.style.left = (S.helpMargin - S.helpPadX) + "px";
       else box.style.right = (S.helpMargin - S.helpPadX) + "px";
       scr.appendChild(box);
     });
@@ -1160,6 +1199,11 @@
       var name = names[ni];
       var isSel = slot === selSlot;
       var y = S.carTop + slot * pitch + (pitch - S.carRowH) / 2;
+      // stock ES dims by distance from the selection, floored at 50%
+      var dist = Math.abs(slot - selSlot);
+      var fade = S.stockFade ? Math.max(0.5, 0.5 + 0.5 * (1 - dist)) : 1;
+      // stock scales the selected entry up by logoScale, easing with distance
+      var grow = 1 + (S.logoScale - 1) * Math.max(0, 1 - dist);
       var perSys = SYSTEM_LOGOS.length ? SYSTEM_LOGOS[ni].src : null;
       if (S.carLogos && (perSys || ART.sysLogo)) {
         var lg = tinted({
@@ -1168,13 +1212,15 @@
           webkitMaskPosition: "left center"
         }, perSys || ART.sysLogo.src,
            S.logoTint ? (isSel ? css("pillText") : css("text")) : "#FFFFFF");
+        lg.style.opacity = fade;
+        if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = "left center"; }
         lg.style.backgroundPosition = "left center";
         scr.appendChild(lg);
       } else {
         scr.appendChild(el("div", {
           left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
           width: (SW - S.carIndent) + "px", display: "flex", alignItems: "center",
-          font: fontCss(S.carFont, S.fCar),
+          font: fontCss(S.carFont * grow, S.fCar), opacity: fade,
           color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
         }, upper(name, S.uCar)));
       }
@@ -1598,7 +1644,7 @@
       x.push('\t<logoSize>' + f(S.carLogoW / SW, 6) + ' ' + f(S.carLogoH / SH, 6) + '</logoSize><!-- logo box ' + S.carLogoW + 'x' + S.carLogoH + 'px; indent = ' + (S.carLogoW / 10) + 'px -->');
     else
       x.push('\t<logoSize>' + f(S.carIndent * 10 / SW, 6) + ' ' + f(S.carRowH / SH, 6) + '</logoSize><!-- text indent = ' + S.carIndent + 'px, row ' + S.carRowH + 'px -->');
-    x.push('\t<logoScale>1.0</logoScale>');
+    x.push('\t<logoScale>' + f(S.logoScale, 2) + '</logoScale>');
     x.push('\t<maxLogoCount>' + S.carRows + '</maxLogoCount>');
     x.push('\t<logoAlignment>left</logoAlignment>');
     x.push('\t<pos>0 ' + f(S.carTop / SH, 6) + '</pos><!-- region top ' + S.carTop + 'px -->');
@@ -1768,8 +1814,10 @@
     x.push('\t<color>' + hex8("text") + '</color>');
     x.push('\t<pos>0 ' + f(S.battY / SH, 6) + '</pos><size>' + f((SW - S.battRight) / SW, 6) + ' 0.0666667</size><!-- right edge ' + S.battRight + 'px in -->');
     x.push('\t<horizontalAlignment>right</horizontalAlignment>');
-    x.push('\t<fontPath>./fonts/' + S.fBatt + '</fontPath>');
-    x.push('\t<fontSize>' + fontFrac(S.battSize) + '</fontSize><!-- ' + S.battSize + 'px -->');
+    if (!S.stockBatteryFont) {
+      x.push('\t<fontPath>./fonts/' + S.fBatt + '</fontPath>');
+      x.push('\t<fontSize>' + fontFrac(S.battSize) + '</fontSize><!-- ' + S.battSize + 'px -->');
+    }
     x.push('\t<itemSpacing>' + f(S.battGap / SW, 6) + '</itemSpacing><!-- ' + S.battGap + 'px -->');
     x.push('\t<incharge>./art/battery/battery-charging.svg</incharge>');
     x.push('\t<full>' + PATHS.battery + '</full>');
@@ -1873,6 +1921,7 @@
       { k: "clockY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" }
     ]},
     { name: "Status bar · Battery", fields: [
+      { k: "stockBatteryFont", t: "bool", label: "Use the UI font (stock)", hint: "Stock EmulationStation draws the battery in its own font; choosing one here needs this build." },
       { k: "fBatt", t: "font", label: "Font" },
       { k: "battSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
       { k: "battRight", t: "num", label: "Right margin", min: 0, max: 620, step: 1, unit: "px" },
@@ -1881,6 +1930,7 @@
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
+      { k: "stockPrompts", t: "bool", label: "Stock button set", hint: "Stock EmulationStation decides which buttons appear — a theme cannot hide them. This build trims them instead." },
       { k: "helpPillOn", t: "bool", label: "Pill behind the hints", hint: "Stock EmulationStation draws the hints with no pill; the pill is this build's addition." },
       { k: "helpFont", t: "num", label: "Label size", min: 12, max: 30, step: 1, unit: "px" },
       { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px" },
@@ -1910,6 +1960,9 @@
       { k: "uCar", t: "bool", label: "Uppercase names" },
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
       { k: "carLogos", t: "bool", label: "Use system logos", hint: "When a logo image exists for a system, ES draws it instead of the name." },
+      { k: "logoScale", t: "num", label: "Selected row scale", min: 1, max: 2, step: .05,
+        hint: "Stock enlarges the selected entry by this much (its default is 1.2)." },
+      { k: "stockFade", t: "bool", label: "Dim unselected rows", hint: "Stock fades entries by distance from the selection, down to 50%. This build keeps every row at full brightness." },
       { k: "logoTint", t: "bool", label: "Tint logos to the row colour", hint: "Off leaves full-colour logos alone, which is what the engine does when the theme sets no logo colours." },
       { k: "carLogoW", t: "num", label: "Logo box width", min: 80, max: 620, step: 10, unit: "px" },
       { k: "carLogoH", t: "num", label: "Logo box height", min: 30, max: 120, step: 2, unit: "px" }
