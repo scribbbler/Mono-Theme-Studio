@@ -6,7 +6,8 @@ build renders. Controls on the left, a true 640×480 device preview on the right
 and a ready-to-use `theme.xml` underneath that updates as you drag.
 
 **Open `index.html` in any browser.** No build step, no dependencies, nothing
-phones home.
+phones home. It works on a phone too: the device fills the screen and the
+controls ride up in a bottom sheet.
 
 ![The carousel screen in the studio](docs/screenshot-carousel.png)
 

@@ -94,8 +94,6 @@
     align-items: start; min-height: calc(100dvh - 57px);
     width: 100%; max-width: 1300px; margin: 0 auto;
   }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-
   /* ---------- control rail ---------- */
   .rail { border-right: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); }
   .railtabs {
@@ -182,6 +180,61 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  .grabber { display: none; }
+
+  @media (max-width: 900px) {
+    /* minmax(0,...) stops the track growing to the console's unscaled width */
+    main { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    .stage { min-width: 0; overflow-x: hidden; }
+    .tabs {
+      flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start;
+      width: 100%; padding-bottom: 4px; scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs .btn { flex: 0 0 auto; }
+
+    /* the device becomes the backdrop */
+    .stage {
+      padding: 12px 12px calc(var(--peek) + 12px);
+      min-height: calc(100dvh - 57px);
+      justify-content: flex-start;
+    }
+    /* the readout would sit on top of the clipped shell, so lift it above */
+    .legend { font-size: 11px; order: -1; opacity: .9; }
+
+    /* controls ride up from the bottom */
+    :root { --peek: 76px; }
+    .rail {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      max-height: 82dvh; display: flex; flex-direction: column;
+      border: 1px solid var(--line); border-bottom: 0;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, .28);
+      transform: translateY(calc(100% - var(--peek)));
+      transition: transform .22s cubic-bezier(.32, .72, 0, 1);
+      touch-action: none;
+    }
+    .rail.open { transform: translateY(0); }
+    #railbody { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    .grabber {
+      display: block; width: 100%; border: 0; background: none; cursor: grab;
+      padding: 10px 0 6px; flex: 0 0 auto;
+    }
+    .grabber::before {
+      content: ""; display: block; width: 42px; height: 4px; margin: 0 auto;
+      border-radius: 2px; background: var(--muted); opacity: .5;
+    }
+    .railtabs { top: 0; position: static; }
+    .export { max-width: none; padding: 0 18px 20px; }
+    pre.xml { max-height: 40vh; }
+    header.bar { padding: 10px 14px; gap: 10px; }
+    .brand h1 { font-size: 15px; }
+    .brand span { display: none; }
+    .presets { gap: 4px; }
+    .presets .btn { padding: 5px 8px; font-size: 11.5px; }
+  }
+
 </style>
 
 <header class="bar">
@@ -193,7 +246,10 @@
 </header>
 
 <main>
-  <aside class="rail" id="rail"></aside>
+  <aside class="rail" id="rail">
+    <button class="grabber" id="grabber" aria-label="Show or hide the controls"></button>
+    <div id="railbody"></div>
+  </aside>
 
   <section class="stage">
     <div class="tabs" id="tabs"></div>
@@ -893,15 +949,32 @@
   }
 
   var CW = 820, CH = 1150;   // wireframe console box
+  function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
+
+  // On a phone the device is the backdrop and the controls ride over it, so
+  // the console is sized against what the sheet leaves visible.
   function fitScreen() {
     var box = document.getElementById("console");
-    var avail = box.parentElement.clientWidth - 48;
-    var byWidth = avail / CW;
-    var byHeight = (window.innerHeight - 190) / CH;
-    var z = Math.min(1, Math.max(.3, Math.min(byWidth, byHeight)));
-    box.style.transform = "scale(" + z + ")";
-    box.style.marginBottom = Math.round(CH * (z - 1)) + "px";
-    box.style.marginRight = Math.round(CW * (z - 1)) + "px";
+    var mob = isMobile();
+    var z;
+    if (mob) {
+      // Phone: the 640x480 screen is what matters, so fit that to the width
+      // and let the shell run off the edges. Reserve room for the screen plus
+      // a slice of the control face; the sheet covers whatever is left.
+      var availW = window.innerWidth - 24;
+      var availH = window.innerHeight - 150 - 76;
+      z = Math.max(.12, Math.min(availW / SW, availH / SH));
+      box.style.transform = "translate(" + (-90 * z) + "px," + (-90 * z) + "px) scale(" + z + ")";
+      box.style.marginRight = (SW * z - CW) + "px";
+      box.style.marginBottom = (SH * z + 150 - CH) + "px";
+    } else {
+      var railW = document.getElementById("rail").offsetWidth || 0;
+      var avail = Math.max(240, window.innerWidth - railW - 48);
+      z = Math.min(1, Math.max(.3, Math.min(avail / CW, (window.innerHeight - 190) / CH)));
+      box.style.transform = "scale(" + z + ")";
+      box.style.marginRight = Math.round(CW * (z - 1)) + "px";
+      box.style.marginBottom = Math.round(CH * (z - 1)) + "px";
+    }
   }
 
   function renderLegend() {
@@ -1314,7 +1387,7 @@
   var railMode = "screen";
 
   function buildRail() {
-    var rail = document.getElementById("rail");
+    var rail = document.getElementById("railbody");
     rail.innerHTML = "";
     var head = el("div"); head.className = "railtabs";
     [["screen", PAGE_NAME[page]], ["general", "General"]].forEach(function (m) {
@@ -1551,7 +1624,36 @@
     if (e.key === "ArrowUp") { move(-1); e.preventDefault(); }
     if (e.key === "ArrowDown") { move(1); e.preventDefault(); }
   });
-  window.addEventListener("resize", fitScreen);
+  // ---------- bottom sheet ----------
+  var railEl = document.getElementById("rail");
+  var grab = document.getElementById("grabber");
+  function setSheet(open) { railEl.classList.toggle("open", open); }
+  grab.addEventListener("click", function () { setSheet(!railEl.classList.contains("open")); });
+
+  var dragY = null;
+  grab.addEventListener("pointerdown", function (e) { dragY = e.clientY; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener("pointermove", function (e) {
+    if (dragY == null) return;
+    var dy = e.clientY - dragY;
+    if (dy < -36) { setSheet(true); dragY = null; }
+    else if (dy > 36) { setSheet(false); dragY = null; }
+  });
+  grab.addEventListener("pointerup", function () { dragY = null; });
+
+  // the XML panel belongs in the sheet on a phone, under the console on desktop
+  var exportEl = document.querySelector(".export");
+  var stageEl = document.querySelector(".stage");
+  var railBody = document.getElementById("railbody");
+  function placeExport() {
+    var target = isMobile() ? railBody : stageEl;
+    if (exportEl.parentElement !== target) target.appendChild(exportEl);
+  }
+
+  function onResize() { placeExport(); fitScreen(); }
+  window.addEventListener("resize", onResize);
+  window.addEventListener("orientationchange", onResize);
+  placeExport();
+  if (/sheet/i.test(location.hash)) setSheet(true);
 
   if (/general/i.test(location.hash)) railMode = "general";
   buildPresets(); buildRail(); buildTabs(); render();
