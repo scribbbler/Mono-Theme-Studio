@@ -106,6 +106,14 @@ numbers or valid hex, and falls back to the typeface the theme uses most when a
 text layer is named something it doesn't recognise. Values outside this tool's
 slider ranges are clamped, and it tells you how many.
 
+## Customizing on the device too
+
+The browser tool is one of three routes, and not always the one you want. The
+R36S build's **[CUSTOMIZING-THEMES.md](https://github.com/scribbbler/R36S-Enhanced-EmulationStation/blob/main/CUSTOMIZING-THEMES.md)**
+covers the other two — the accent colour and font size every Mono theme exposes
+in the device's own menu, and the fonts, icons and backgrounds you can replace
+by dropping files on the card.
+
 ## Using what it produces
 
 **Download .zip** gives you a whole theme folder: the edited `theme.xml` plus

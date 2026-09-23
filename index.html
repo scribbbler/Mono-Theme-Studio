@@ -2118,7 +2118,8 @@
     x.push('    </view>');
     x.push('</theme>');
 
-    document.getElementById("xml").textContent = x.join("\n");
+    var out = document.getElementById("xml");
+    if (out) out.textContent = x.join("\n");
   }
 
   // ---------- controls ----------
@@ -2320,6 +2321,9 @@
       g.fields.forEach(function (fd) { box.appendChild(buildField(fd)); });
       d.appendChild(box); rail.appendChild(d);
     });
+    // on a phone the export panel lives in this rail, so clearing it above
+    // takes the panel - and #xml with it - out of the document
+    placeExport();
   }
 
   function buildField(fd) {
