@@ -81,6 +81,23 @@ entries inflated with `DecompressionStream`.
 
 ![An imported theme previewing with its own art and font](docs/screenshot-import.png)
 
+It also reads the machinery bigger themes are built out of. `${variables}` are
+resolved, including the ones an included file defines, so a theme written almost
+entirely in named colours arrives with real values. A `<subset>` — the menu
+choices a theme offers, like a colour scheme or an aspect ratio — resolves to
+its first option, which is what a freshly installed theme shows. Properties
+merge across files the way the engine merges them, so a carousel defined in one
+file and adjusted in another keeps both halves. Carousels can be horizontal as
+well as vertical.
+
+One caveat worth knowing, because it decides what you see: **this fork has no
+`ifSubset` support.** A theme that guards blocks with `ifSubset` — Art Book Next
+is the well-known one — has every guarded block applied on the device, in file
+order, the last one winning, rather than only the one matching your menu
+choice. The preview reproduces that, so a theme offering seven colour schemes or
+six aspect ratios resolves here to the same one it resolves to on the R36S, even
+when that isn't the one the theme's author intended you to get.
+
 Real themes vary a lot, so the importer is deliberately forgiving: it follows
 `<include>` files, accepts an XML declaration that sits after a comment (which
 the device's parser tolerates and some published themes rely on), takes the last

@@ -424,6 +424,7 @@
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
+    carType: "vertical", carPosX: 0, carPosY: 0, carSizeW: 640, carSizeH: 480,
     glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
     helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100
@@ -465,6 +466,9 @@
   var cursor = 2;          // carousel selection index
   var glCursor = 0;        // gamelist selection index
 
+  // the theme-folder names the engine uses for the systems it previews
+  var SYSTEM_IDS = ["arcade", "cps1", "cps2", "cps3", "mame", "gb", "megadrive", "neogeo",
+    "snes", "nes", "gba", "psx"];
   var SYSTEMS = ["Arcade", "Capcom System I", "Capcom System II", "Capcom System III", "MAME", "Game Boy", "Mega Drive", "Neo Geo"];
   var GAMES = [
     "Adventures of Starg Saver, The (USA, Eu…", "Aerostar (USA, Europe)", "Amazing Penguin (USA, Europe)",
@@ -547,14 +551,31 @@
       }
       return found;
     }
+    // every element matching the name, in document order
+    function all(token, tag, name) {
+      var vs = views(token), out = [];
+      for (var i = 0; i < vs.length; i++) {
+        var list = vs[i].getElementsByTagName(tag);
+        for (var j = 0; j < list.length; j++)
+          if (!name || list[j].getAttribute("name") === name) out.push(list[j]);
+      }
+      return out;
+    }
+    // The engine merges an element's properties into one map as it parses, so
+    // a value set in an earlier file survives a later block that redefines the
+    // element without mentioning it. Reading only the last block loses it -
+    // which is how a theme split across aspect-ratio files lost its carousel
+    // <type>. Take the last occurrence of the property, not of the element.
     function prop(token, tag, name, p) {
-      var e = el(token, tag, name);
-      if (!e) return null;
-      var c = e.getElementsByTagName(p);
-      return c.length ? c[0].textContent.trim() : null;
+      var list = all(token, tag, name), val = null;
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i].getElementsByTagName(p);
+        if (c.length) val = c[c.length - 1].textContent.trim();   // last <path> wins too
+      }
+      return val;
     }
     return {
-      el: el, prop: prop, baseDir: baseDir,
+      el: el, all: all, prop: prop, baseDir: baseDir,
       num: function (token, tag, name, p) { var v = prop(token, tag, name, p); return v == null ? null : parseFloat(v); },
       pair: function (token, tag, name, p) {
         var v = prop(token, tag, name, p);
@@ -603,6 +624,30 @@
   var SYSTEM_LOGOS = [];   // [{ id, src }] read from the theme's own system folders
   var SYSTEM_EXTRAS = [];  // [{ id, src, name }] per-system extra art (console shots)
   var EXTRA_GEO = null;    // where the root theme places that extra
+  // A theme can point one logo path at every system at once by writing
+  // ${system.theme} in it; the engine substitutes each system's folder name.
+  function loadPatternLogos(doc, files, baseDir) {
+    var best = null;
+    var imgs = doc.getElementsByTagName("image");
+    for (var i = 0; i < imgs.length; i++) {
+      if (imgs[i].getAttribute("name") !== "logo") continue;
+      var ps = imgs[i].getElementsByTagName("path");
+      for (var j = 0; j < ps.length; j++) {
+        var t = ps[j].textContent.trim();
+        if (t.indexOf("${system.theme}") >= 0) best = t;   // last one wins
+      }
+    }
+    if (!best) return Promise.resolve([]);
+    var ids = SYSTEM_IDS.slice(0, 12);
+    return Promise.all(ids.map(function (id) {
+      var path = resolve(files, baseDir, best.split("${system.theme}").join(id));
+      if (!path) return null;
+      return Promise.resolve(files[path]()).then(function (b) {
+        return { id: id, src: bytesToDataURL(b, mimeOf(path)), extra: null, extraName: null };
+      }).catch(function () { return null; });
+    })).then(function (l) { return l.filter(Boolean); });
+  }
+
   function loadSystemLogos(files, rootDir) {
     var esc = rootDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     var re = new RegExp("^" + esc + "/([^/]+)/theme\\.xml$", "i");
@@ -691,6 +736,20 @@
   function loadIncludes(doc, files, baseDir, depth) {
     var incs = [].slice.call(doc.getElementsByTagName("include"));
     if (!incs.length || depth > 4) return Promise.resolve(doc);
+    // An <include> inside a <subset> is one option of a menu choice. With no
+    // choice saved the engine takes the first option of each subset and skips
+    // the rest (ThemeData.cpp:509 isFirstSubset), which is what a freshly
+    // installed theme shows. An ifSubset attribute is NOT a filter here - this
+    // fork has no such attribute - so those includes all load, last winning.
+    var seenSubset = {};
+    incs = incs.filter(function (inc) {
+      var owner = inc.parentNode && inc.parentNode.tagName === "subset"
+        ? inc.parentNode.getAttribute("name") : inc.getAttribute("subset");
+      if (!owner) return true;
+      if (seenSubset[owner]) return false;
+      seenSubset[owner] = true;
+      return true;
+    });
     return Promise.all(incs.map(function (inc) {
       var path = resolve(files, baseDir, inc.textContent.trim());
       if (!path || !files[path]) return null;
@@ -706,10 +765,55 @@
     })).then(function () { return doc; });
   }
 
+  // Themes like Art Book Next are written almost entirely in ${variables}.
+  // The device's fork reads every <variables> block it meets, in order, and a
+  // later definition wins - it has no ifSubset filtering (ThemeData.cpp:757
+  // filters on region, language, tinyScreen and ifHelpPrompts, nothing else),
+  // so a theme offering seven colour schemes resolves to its last one here
+  // exactly as it does on the device.
+  var THEME_VARS = {};
+  function collectVars(doc) {
+    THEME_VARS = {};
+    var vs = doc.getElementsByTagName("variables");
+    for (var i = 0; i < vs.length; i++) {
+      var kids = vs[i].children;
+      for (var j = 0; j < kids.length; j++) {
+        var v = kids[j].textContent.trim();
+        if (v) THEME_VARS[kids[j].tagName] = v;   // empty values are ignored
+      }
+    }
+  }
+  function expandVars(str) {
+    if (!str || str.indexOf("${") < 0) return str;
+    for (var pass = 0; pass < 4 && str.indexOf("${") >= 0; pass++) {
+      var next = str.replace(/\$\{([^}]+)\}/g, function (m, k) {
+        return THEME_VARS[k] !== undefined ? THEME_VARS[k] : m;
+      });
+      if (next === str) break;
+      str = next;
+    }
+    return str;
+  }
+  // substituting once over the document means every reader below sees real
+  // values without each one having to remember to expand
+  function expandDoc(doc) {
+    var w = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_TEXT, null, false);
+    var list = [], n;
+    while ((n = w.nextNode())) list.push(n);
+    list.forEach(function (t) {
+      var v = expandVars(t.nodeValue);
+      if (v !== t.nodeValue) t.nodeValue = v;
+    });
+  }
+
   function applyTheme(files, xmlPath, xmlText) {
     var doc = parseThemeXml(xmlText);
     var baseDir = xmlPath.indexOf("/") >= 0 ? xmlPath.slice(0, xmlPath.lastIndexOf("/")) : "";
-    return loadIncludes(doc, files, baseDir, 0).then(function () { return applyDoc(doc, files, baseDir); });
+    return loadIncludes(doc, files, baseDir, 0).then(function () {
+      collectVars(doc);
+      expandDoc(doc);
+      return applyDoc(doc, files, baseDir);
+    });
   }
 
   function applyDoc(doc, files, baseDir) {
@@ -777,6 +881,14 @@
     setNum("carRadius", crad != null ? crad * SH : 0);
     px(r.num("system", "carousel", null, "selectorWidth"), "x", "carPillW");
     px(r.num("system", "carousel", null, "selectorPadding"), "y", "carPad");
+    var cType = (r.prop("system", "carousel", null, "type") || "").trim().toLowerCase();
+    S.carType = /horizontal/.test(cType) ? "horizontal" : "vertical";
+    var cPos = r.pair("system", "carousel", null, "pos");
+    var cSize = r.pair("system", "carousel", null, "size");
+    S.carPosX = cPos ? cPos[0] * SW : 0;
+    S.carPosY = cPos ? cPos[1] * SH : 0;
+    S.carSizeW = cSize ? cSize[0] * SW : SW;
+    S.carSizeH = cSize ? cSize[1] * SH : SH;
     var mlc = r.num("system", "carousel", null, "maxLogoCount");
     setNum("carRows", mlc != null ? mlc : 3);        // stock default is 3
     var lsc2 = r.num("system", "carousel", null, "logoScale");
@@ -931,6 +1043,12 @@
     }
 
     jobs.push(loadSystemLogos(files, baseDir).then(function (list) {
+      if (!list.filter(function (e) { return e.src; }).length)
+        return loadPatternLogos(doc, files, baseDir).then(function (p) {
+          return p.length ? p.concat(list) : list;
+        });
+      return list;
+    }).then(function (list) {
       var withLogo = list.filter(function (e) { return e.src; });
       if (withLogo.length) { SYSTEM_LOGOS = withLogo; S.carLogos = true; }
       SYSTEM_EXTRAS = list.filter(function (e) { return e.extra; });
@@ -1064,12 +1182,16 @@
     S.stockPrompts = stock;
     S.stockBatteryFont = stock;
     if (stock) {
-      if (!keepTheme) { S.helpPillOn = false; S.pillA = 0; }
-      if (S.logoScale === 1) S.logoScale = 1.2;
+      // an imported theme keeps the values it actually declared; only a theme
+      // being authored here gets stock's defaults filled in
+      if (!keepTheme) {
+        S.helpPillOn = false; S.pillA = 0;
+        if (S.logoScale === 1) S.logoScale = 1.2;
+      }
     } else {
       S.helpPillOn = true;
       if (S.pillA === 0) S.pillA = 100;
-      S.logoScale = 1;
+      if (!keepTheme) S.logoScale = 1;
     }
   }
 
@@ -1249,6 +1371,9 @@
   }
 
   function drawCarousel(scr) {
+    if (S.carType === "horizontal") return drawCarouselH(scr);
+    // declared up here because the list-scroll branch below counts the entries
+    var names = sysList();
     var pitch = S.carHeight / S.carRows;
     var centerSlot = Math.floor((S.carRows - 1) / 2);
     var first, selSlot;
@@ -1260,7 +1385,6 @@
       first = cursor - centerSlot; selSlot = centerSlot;
     }
 
-    var names = sysList();
     var selName = names[((cursor % names.length) + names.length) % names.length];
     var pillW = S.carFit
       ? Math.min(textWidth(upper(selName, S.uCar), S.carFont, S.fCar) + S.carPad * 2, S.carPillW)
@@ -1306,6 +1430,46 @@
           color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
         }, upper(name, S.uCar)));
       }
+    }
+  }
+
+  // A horizontal carousel centres the selected entry and steps the rest across
+  // by logoSpacing = (width - logoWidth * maxLogoCount) / maxLogoCount +
+  // logoWidth (SystemView.cpp:1104).
+  function drawCarouselH(scr) {
+    var names = sysList();
+    var n = names.length;
+    var lw = S.carLogoW, lh = S.carLogoH;
+    var count = Math.max(1, S.carRows);
+    var spacing = (S.carSizeW - lw * count) / count + lw;
+    var xOff = S.carPosX + (S.carSizeW - lw) / 2;
+    var yOff = S.carPosY + (S.carSizeH - lh) / 2;
+    var span = Math.ceil(S.carSizeW / Math.max(1, spacing)) + 1;
+    for (var d = -span; d <= span; d++) {
+      var x = xOff + d * spacing;
+      if (x + lw < 0 || x > SW) continue;
+      var ni = ((cursor + d) % n + n) % n;
+      var isSel = d === 0;
+      // stock floors the unselected entries at half opacity
+      var fade = S.stockFade ? (isSel ? 1 : 0.5) : 1;
+      var grow = isSel ? S.logoScale : 1;
+      var perSys = SYSTEM_LOGOS.length ? SYSTEM_LOGOS[ni % SYSTEM_LOGOS.length].src : null;
+      var node;
+      if (S.carLogos && (perSys || ART.sysLogo)) {
+        node = tinted({ left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px" },
+          perSys || ART.sysLogo.src,
+          S.logoTint ? (isSel ? css("pillText") : css("text")) : "#FFFFFF");
+      } else {
+        node = el("div", {
+          left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          font: fontCss(S.carFont, S.fCar), color: isSel ? css("pillText") : css("text"),
+          textAlign: "center", overflow: "hidden"
+        }, upper(names[ni], S.uCar));
+      }
+      node.style.opacity = fade;
+      if (grow !== 1) node.style.transform = "scale(" + grow + ")";
+      scr.appendChild(node);
     }
   }
 
@@ -1729,6 +1893,7 @@
       x.push('\t<logoSize>' + f(S.carLogoW / SW, 6) + ' ' + f(S.carLogoH / SH, 6) + '</logoSize><!-- logo box ' + S.carLogoW + 'x' + S.carLogoH + 'px; indent = ' + (S.carLogoW / 10) + 'px -->');
     else
       x.push('\t<logoSize>' + f(S.carIndent * 10 / SW, 6) + ' ' + f(S.carRowH / SH, 6) + '</logoSize><!-- text indent = ' + S.carIndent + 'px, row ' + S.carRowH + 'px -->');
+    x.push('\t<type>' + S.carType + '</type>');
     x.push('\t<logoScale>' + f(S.logoScale, 2) + '</logoScale>');
     x.push('\t<maxLogoCount>' + S.carRows + '</maxLogoCount>');
     x.push('\t<logoAlignment>left</logoAlignment>');
@@ -2055,13 +2220,15 @@
       { k: "fCar", t: "font", label: "Name font" },
       { k: "uCar", t: "bool", label: "Uppercase names" },
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
+      { k: "carType", t: "choice", label: "Direction", choices: [["vertical", "Vertical"], ["horizontal", "Horizontal"]],
+        hint: "A horizontal carousel centres the selected system and steps the others sideways." },
       { k: "carLogos", t: "bool", label: "Use system logos", hint: "When a logo image exists for a system, ES draws it instead of the name." },
       { k: "logoScale", t: "num", label: "Selected row scale", min: 1, max: 2, step: .05,
         hint: "Stock enlarges the selected entry by this much (its default is 1.2)." },
       { k: "stockFade", t: "bool", label: "Dim unselected rows", hint: "Stock fades entries by distance from the selection, down to 50%. This build keeps every row at full brightness." },
       { k: "logoTint", t: "bool", label: "Tint logos to the row colour", hint: "Off leaves full-colour logos alone, which is what the engine does when the theme sets no logo colours." },
-      { k: "carLogoW", t: "num", label: "Logo box width", min: 80, max: 620, step: 10, unit: "px" },
-      { k: "carLogoH", t: "num", label: "Logo box height", min: 30, max: 120, step: 2, unit: "px" }
+      { k: "carLogoW", t: "num", label: "Logo box width", min: 20, max: 700, step: 10, unit: "px" },
+      { k: "carLogoH", t: "num", label: "Logo box height", min: 20, max: 520, step: 2, unit: "px" }
     ].concat(artFields(["sysLogo"])).concat([
       { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). They are fitted inside the logo box keeping their aspect, the engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
     ]) }],
