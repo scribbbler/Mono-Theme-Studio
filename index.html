@@ -141,6 +141,11 @@
   .switch input { accent-color: var(--accent); width: 16px; height: 16px; }
 
   /* ---------- stage ---------- */
+  /* anything the theme positions can be dragged straight on the preview */
+  .grabbable { cursor: grab; touch-action: none; }
+  .grabbable:active { cursor: grabbing; }
+  .grabbable:hover { outline: 1px dashed rgba(148,163,184,.85); outline-offset: 2px; }
+  .grabbable.corner:hover { outline-offset: 0; }
   .stage { padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .console {
@@ -1212,6 +1217,7 @@
       display: "flex", alignItems: "center",
       font: fontCss(S.clockSize, S.fClock), color: css("text")
     }, "04:20 AM");
+    grab(clock, { x: { k: "clockX" }, y: { k: "clockY" } }, "Clock");
     scr.appendChild(clock);
 
     if (page === "gamelist" || page === "menu") {
@@ -1224,11 +1230,15 @@
       scr.appendChild(title);
     }
 
+    // the wrapper spans the bar to right-align its contents, so only what you
+    // can actually see takes the pointer
     var batt = el("div", {
       left: "0px", top: S.battY + "px", width: (SW - S.battRight) + "px", height: "32px",
       display: "flex", alignItems: "center", justifyContent: "flex-end", gap: S.battGap + "px",
-      font: fontCss(S.battSize, S.stockBatteryFont ? S.fHelp : S.fBatt), color: css("text")
+      font: fontCss(S.battSize, S.stockBatteryFont ? S.fHelp : S.fBatt), color: css("text"),
+      pointerEvents: "none"
     });
+    var battMap = { x: { k: "battRight", invert: true }, y: { k: "battY" } };
     if (ART.battery) {
       batt.appendChild(tinted({ position: "relative", width: "32px", height: "32px" },
         ART.battery.src, css("text")));
@@ -1242,6 +1252,10 @@
       batt.appendChild(icon);
     }
     batt.appendChild(el("span", { position: "relative" }, "99%"));
+    [].slice.call(batt.children).forEach(function (c) {
+      c.style.pointerEvents = "auto";
+      grab(c, battMap, "Battery");
+    });
     scr.appendChild(batt);
   }
 
@@ -1328,6 +1342,7 @@
         borderRadius: S.helpPillOn ? (pillH / 2) + "px" : "0"
       });
       g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
+      grab(box, { x: { k: "helpMargin", invert: gi !== 0 && !S.stockPrompts } }, "Hint bar");
       if (S.stockPrompts) {
         // stock lays the row out left to right from its themed position with a
         // fixed 16px between entries, and simply runs off the edge if it is
@@ -1343,12 +1358,12 @@
   function drawSystemInfo(scr) {
     if (!S.siShow) return;
     var txt = upper("152 games available", S.siUpper);
-    scr.appendChild(el("div", {
+    scr.appendChild(grab(el("div", {
       left: "0px", top: S.siY + "px", width: SW + "px", height: "28px",
       display: "flex", alignItems: "center",
       justifyContent: S.siAlign === "left" ? "flex-start" : S.siAlign === "right" ? "flex-end" : "center",
       padding: "0 24px", font: fontCss(S.siSize, S.fSI), color: css("siColor")
-    }, txt));
+    }, txt), { y: { k: "siY" } }, "Game count"));
   }
 
   function sysList() {
@@ -1393,10 +1408,10 @@
     var rowTop = S.carTop + selSlot * pitch + (pitch - S.carRowH) / 2;
     var pillY = rowTop + (S.carRowH - S.carPillH) / 2;
 
-    scr.appendChild(el("div", {
+    scr.appendChild(grab(el("div", {
       left: pillX + "px", top: pillY + "px", width: pillW + "px", height: S.carPillH + "px",
       background: pillBg(), borderRadius: S.carRadius + "px"
-    }));
+    }), { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
 
     for (var slot = 0; slot < S.carRows; slot++) {
       var idx = first + slot;
@@ -1421,14 +1436,14 @@
         lg.style.opacity = fade;
         if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = "left center"; }
         lg.style.backgroundPosition = "left center";
-        scr.appendChild(lg);
+        scr.appendChild(grab(lg, { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       } else {
-        scr.appendChild(el("div", {
+        scr.appendChild(grab(el("div", {
           left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
           width: (SW - S.carIndent) + "px", display: "flex", alignItems: "center",
           font: fontCss(S.carFont * grow, S.fCar), opacity: fade,
           color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap"
-        }, upper(name, S.uCar)));
+        }, upper(name, S.uCar)), { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       }
     }
   }
@@ -1469,6 +1484,7 @@
       }
       node.style.opacity = fade;
       if (grow !== 1) node.style.transform = "scale(" + grow + ")";
+      grab(node, { x: { k: "carLogoW" }, y: { k: "carLogoH" } }, "Logo box size");
       scr.appendChild(node);
     }
   }
@@ -1488,6 +1504,15 @@
         gi.src = ART.gameArt.src; gi.alt = "";
         box.appendChild(gi);
       }
+      grab(box, { x: { k: "artX" }, y: { k: "artY" } }, "Game art");
+      var handle = el("div", {
+        position: "absolute", right: "-5px", bottom: "-5px", width: "12px", height: "12px",
+        background: css("text"), borderRadius: "2px", opacity: ".8", cursor: "nwse-resize"
+      });
+      handle.classList.add("corner");
+      grab(handle, { x: { k: "artW" }, y: { k: "artH" } }, "Game art size");
+      handle.style.cursor = "nwse-resize";
+      box.appendChild(handle);
       scr.appendChild(box);
     }
     var rows = Math.floor((SH - 48 - 60) / S.glPitch);
@@ -1499,17 +1524,17 @@
         var w = S.glFit
           ? Math.min(textWidth(upper(name, S.uGl), S.glFont, S.fGl) + S.glInset * 2, S.glWidth)
           : S.glWidth;
-        scr.appendChild(el("div", {
+        scr.appendChild(grab(el("div", {
           left: S.glLeft + "px", top: (y - 1) + "px", width: w + "px",
           height: S.glPillH + "px", background: pillBg(), borderRadius: S.glRadius + "px"
-        }));
+        }), { x: { k: "glLeft" }, y: { k: "glTop" } }, "Game list"));
       }
-      scr.appendChild(el("div", {
+      scr.appendChild(grab(el("div", {
         left: (S.glLeft + S.glInset) + "px", top: y + "px", height: S.glPillH + "px",
         width: (S.glWidth - S.glInset) + "px", display: "flex", alignItems: "center",
         font: fontCss(S.glFont, S.fGl),
         color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap", overflow: "hidden"
-      }, upper(name, S.uGl)));
+      }, upper(name, S.uGl)), { x: { k: "glLeft" }, y: { k: "glTop" } }, "Game list"));
     }
   }
 
@@ -1563,11 +1588,12 @@
     var keyH = cell - S.kbSpacing;
 
     // title + text field, as the search popup shows them
-    scr.appendChild(el("div", {
+    var KB = { y: { k: "kbTop" } };
+    scr.appendChild(grab(el("div", {
       left: left + "px", top: (S.kbTop - 76) + "px", width: S.kbWidth + "px", height: "26px",
       display: "flex", alignItems: "center", textTransform: "uppercase",
       font: fontCss(20, S.fMenuTitle), color: css("text")
-    }, "Search".toUpperCase()));
+    }, "Search".toUpperCase()), KB, "Keyboard"));
     var fieldH = 36;
     scr.appendChild(el("div", {
       left: left + "px", top: (S.kbTop - 44) + "px", width: S.kbWidth + "px", height: fieldH + "px",
@@ -1730,6 +1756,66 @@
     scr.appendChild(im);
   }
 
+  // ---------- direct manipulation ----------
+  // Anything positioned by a theme property can be dragged in the preview.
+  // grab() maps pointer movement onto those properties: one pixel moved is one
+  // pixel of the 640x480 screen, whatever the mock-up is scaled to.
+  var dragging = null;
+
+  function screenScale() {
+    var r = document.getElementById("screen").getBoundingClientRect();
+    return r.width ? r.width / SW : 1;
+  }
+
+  function grab(node, map, label) {
+    node.classList.add("grabbable");
+    node.addEventListener("pointerdown", function (ev) {
+      if (ev.button != null && ev.button !== 0) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var scale = screenScale();
+      var startX = ev.clientX, startY = ev.clientY, from = {};
+      Object.keys(map).forEach(function (axis) { from[axis] = S[map[axis].k]; });
+
+      function move(e) {
+        var d = { x: (e.clientX - startX) / scale, y: (e.clientY - startY) / scale };
+        Object.keys(map).forEach(function (axis) {
+          var m = map[axis];
+          setNum(m.k, Math.round(from[axis] + d[axis] * (m.invert ? -1 : 1)));
+        });
+        dragging = { map: map, label: label };
+        render();
+      }
+      function up() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+        dragging = null;
+        buildRail();   // the sliders catch up with where it landed
+        render();
+      }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    });
+    return node;
+  }
+
+  // a live readout of what the drag is actually changing
+  function drawDragHint(scr) {
+    if (!dragging) return;
+    var parts = Object.keys(dragging.map).map(function (axis) {
+      var k = dragging.map[axis].k;
+      return k + " " + Math.round(S[k]);
+    });
+    var chip = el("div", {
+      left: "8px", top: "8px", padding: "4px 8px", borderRadius: "4px",
+      background: "rgba(0,0,0,.78)", color: "#fff", zIndex: "99",
+      font: "600 11px ui-monospace, monospace", whiteSpace: "nowrap", pointerEvents: "none"
+    }, dragging.label + " \u2014 " + parts.join("  "));
+    scr.appendChild(chip);
+  }
+
   function render() {
     var scr = document.getElementById("screen");
     scr.innerHTML = "";
@@ -1746,6 +1832,7 @@
       drawHelp(scr);
     }
     drawOverlay(scr);
+    drawDragHint(scr);
     fitScreen();
     renderLegend();
     renderXML();
@@ -1804,6 +1891,9 @@
         : page === "saver"
           ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
           : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
+    // dragging is only discoverable if something says so
+    if (page !== "menu" && page !== "popup" && page !== "saver")
+      parts.push("<b>drag</b> anything on the screen to place it");
     document.getElementById("legend").innerHTML = parts.join(" · ") + themeNote();
   }
 
@@ -2735,19 +2825,19 @@
 
   // ---------- bottom sheet ----------
   var railEl = document.getElementById("rail");
-  var grab = document.getElementById("grabber");
+  var grabber = document.getElementById("grabber");
   function setSheet(open) { railEl.classList.toggle("open", open); }
-  grab.addEventListener("click", function () { setSheet(!railEl.classList.contains("open")); });
+  grabber.addEventListener("click", function () { setSheet(!railEl.classList.contains("open")); });
 
   var dragY = null;
-  grab.addEventListener("pointerdown", function (e) { dragY = e.clientY; grab.setPointerCapture(e.pointerId); });
-  grab.addEventListener("pointermove", function (e) {
+  grabber.addEventListener("pointerdown", function (e) { dragY = e.clientY; grabber.setPointerCapture(e.pointerId); });
+  grabber.addEventListener("pointermove", function (e) {
     if (dragY == null) return;
     var dy = e.clientY - dragY;
     if (dy < -36) { setSheet(true); dragY = null; }
     else if (dy > 36) { setSheet(false); dragY = null; }
   });
-  grab.addEventListener("pointerup", function () { dragY = null; });
+  grabber.addEventListener("pointerup", function () { dragY = null; });
 
   // the XML panel belongs in the sheet on a phone, under the console on desktop
   var exportEl = document.querySelector(".export");

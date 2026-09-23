@@ -28,6 +28,12 @@ Y to reach the search keyboard, Select for the clock screensaver, Start for the
 menu, and the d-pad to move the selection. It navigates the way the device does,
 so you can walk a theme instead of inspecting it screen by screen.
 
+- **Drag to place** — anything the theme positions moves under the pointer:
+  the clock, the battery, the carousel, the game list, the game-art box (with a
+  corner handle to resize it), the game count, the hint bar, the keyboard grid.
+  One pixel dragged is one pixel of the 640×480 screen whatever the mock-up is
+  scaled to, a readout names the properties as they change, and values still
+  stop at the same limits the sliders use. Works with touch.
 - **Colour and opacity per layer** — every colour has an opacity slider, because
   the engine expresses opacity as the alpha byte of the colour.
 - **Gradient selections** — a second colour fades top-to-bottom across the
