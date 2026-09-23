@@ -422,10 +422,11 @@
     pillGrad: false, pillEnd: "#1257C9",
     ovShow: true, ovOpacity: 100, ovBlend: "normal", ovPixel: true,
     barBgOn: false, barBg: "#101010", barBgA: 100, barH: 44,
-    clockX: 24, clockY: 8, clockSize: 20,
-    battRight: 20, battY: 8, battSize: 20, battGap: 6,
+    clockX: 24, clockY: 8, clockSize: 20, clockW: 220, clockAlign: "left",
+    battRight: 20, battY: 8, battSize: 20, battGap: 6, battX: 0, battAlign: "right",
     logoTint: true, helpPillOn: true, stockFade: false, stockPrompts: false,
     logoScale: 1, stockBatteryFont: false, engine: "custom",
+    helpPosSet: false, helpX: 0, helpY: 0, helpOx: 0, helpOy: 0,
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
     carLogos: false, carLogoW: 320, carLogoH: 72,
@@ -626,6 +627,9 @@
   }
 
 
+  var BG_TINT = {};        // per-slot <color> applied to background art
+  var FRONT_EXTRAS = [];   // per-system extra art the theme draws over the carousel
+  var FRONT_GEO = null;
   var SYSTEM_LOGOS = [];   // [{ id, src }] read from the theme's own system folders
   var SYSTEM_EXTRAS = [];  // [{ id, src, name }] per-system extra art (console shots)
   var EXTRA_GEO = null;    // where the root theme places that extra
@@ -651,6 +655,60 @@
         return { id: id, src: bytesToDataURL(b, mimeOf(path)), extra: null, extraName: null };
       }).catch(function () { return null; });
     })).then(function (l) { return l.filter(Boolean); });
+  }
+
+  // A theme can also draw per-system art as an <image extra="true"> in the root
+  // file, placed with its own origin/pos/maxSize and layered by zIndex. Art
+  // Book's "syslogo" is one: the system's logo, centred over the artwork.
+  function loadPatternExtras(doc, files, baseDir, r) {
+    var imgs = doc.getElementsByTagName("image"), pick = null;
+    for (var i = 0; i < imgs.length; i++) {
+      if (imgs[i].getAttribute("extra") !== "true") continue;
+      var ps = imgs[i].getElementsByTagName("path"), ref = null;
+      for (var j = 0; j < ps.length; j++) {
+        var t = ps[j].textContent.trim();
+        if (t.indexOf("${system.theme}") >= 0) ref = t;   // the engine keeps the last
+      }
+      if (ref) pick = { el: imgs[i], ref: ref };          // and the last element wins
+    }
+    if (!pick) return Promise.resolve(null);
+
+    function one(tag, dflt) {
+      var n = pick.el.getElementsByTagName(tag);
+      if (!n.length) return dflt;
+      var a = n[n.length - 1].textContent.trim().split(/\s+/).map(parseFloat);
+      return a.length >= 2 && a.every(isFinite) ? a : dflt;
+    }
+    var pos = one("pos", [0.5, 0.5]), origin = one("origin", [0, 0]);
+    var maxSize = one("maxSize", null), size = one("size", null);
+    var box = maxSize || size || [1, 1];
+    var zEl = pick.el.getElementsByTagName("zIndex");
+    var z = zEl.length ? parseFloat(zEl[zEl.length - 1].textContent) : 0;
+    var cEl = pick.el.getElementsByTagName("color");
+    var tint = null;
+    if (cEl.length) {
+      var v = cEl[cEl.length - 1].textContent.replace("#", "").trim();
+      if (/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(v))
+        tint = { css: "#" + v.slice(0, 6).toUpperCase(),
+                 a: v.length === 8 ? Math.round(parseInt(v.slice(6), 16) / 255 * 100) : 100 };
+    }
+    var geo = {
+      x: pos[0] * SW, y: pos[1] * SH, ox: origin[0], oy: origin[1],
+      w: box[0] * SW, h: box[1] * SH,
+      // maxSize fits inside the box; size fills it
+      fit: maxSize ? "contain" : "fill",
+      z: isFinite(z) ? z : 0, tint: tint
+    };
+    return Promise.all(SYSTEM_IDS.slice(0, 12).map(function (id) {
+      var path = resolve(files, baseDir, pick.ref.split("${system.theme}").join(id));
+      if (!path) return null;
+      return Promise.resolve(files[path]()).then(function (b) {
+        return { id: id, src: bytesToDataURL(b, mimeOf(path)) };
+      }).catch(function () { return null; });
+    })).then(function (l) {
+      l = l.filter(Boolean);
+      return l.length ? { list: l, geo: geo } : null;
+    });
   }
 
   function loadSystemLogos(files, rootDir) {
@@ -824,6 +882,7 @@
   function applyDoc(doc, files, baseDir) {
     clamped = [];
     SYSTEM_LOGOS = []; SYSTEM_EXTRAS = []; EXTRA_GEO = null;
+    FRONT_EXTRAS = []; FRONT_GEO = null;
     var r = makeReader(doc, baseDir);
     var jobs = [];
 
@@ -866,6 +925,18 @@
       // row text still needs a colour: take it from the carousel's own text layer
       col(r.colour("system", "text", "logoText", "color"), "text");
     }
+    // A theme places the hint bar itself. Some use that to hide it - parking it
+    // at pos 1 1 with origin 0 0 puts the whole row past the bottom-right
+    // corner, so the device shows nothing however the On-Screen Help setting
+    // is set. Reproduce the placement rather than always drawing it at the foot.
+    var hPos = r.pair("system", "helpsystem", null, "pos");
+    var hOrigin = r.pair("system", "helpsystem", null, "origin");
+    if (hPos) {
+      S.helpPosSet = true;
+      S.helpX = hPos[0] * SW; S.helpY = hPos[1] * SH;
+      S.helpOx = hOrigin ? hOrigin[0] : 0;
+      S.helpOy = hOrigin ? hOrigin[1] : 0;
+    } else S.helpPosSet = false;
     var helpBg = r.colour("system", "helpsystem", null, "backgroundColor");
     S.helpPillOn = !!helpBg;
     if (helpBg) col(helpBg, "helpPill");
@@ -939,13 +1010,23 @@
     // ---- status bar ----
     var cp = r.pair("screen", "text", "clock", "pos");
     if (cp) { setNum("clockX", cp[0] * SW); setNum("clockY", cp[1] * SH); }
+    // the clock is text in a box: <size> is the box and <alignment> decides
+    // where in it the time sits, so reading only <pos> misplaces it
+    var cz = r.pair("screen", "text", "clock", "size");
+    if (cz) setNum("clockW", cz[0] * SW);
+    var ca = (r.prop("screen", "text", "clock", "alignment") || "").trim().toLowerCase();
+    S.clockAlign = ca === "right" ? "right" : ca === "center" ? "center" : "left";
     var cf = r.num("screen", "text", "clock", "fontSize");
     if (cf) setNum("clockSize", cf * SH * BOOST);
     useFont(r.prop("screen", "text", "clock", "fontPath"), "fClock");
-    var bs = r.pair("screen", "batteryIndicator", null, "size");
-    if (bs) setNum("battRight", SW - bs[0] * SW);
+    // horizontalAlignment defaults to LEFT in the engine
+    // (ControllerActivityComponent.cpp:48); the Mono themes opt into right.
+    var ba = (r.prop("screen", "batteryIndicator", null, "horizontalAlignment") || "").trim().toLowerCase();
+    S.battAlign = ba === "left" ? "left" : ba === "center" ? "center" : ba === "right" ? "right" : "left";
     var bp = r.pair("screen", "batteryIndicator", null, "pos");
-    if (bp) setNum("battY", bp[1] * SH);
+    if (bp) { setNum("battX", bp[0] * SW); setNum("battY", bp[1] * SH); }
+    var bs = r.pair("screen", "batteryIndicator", null, "size");
+    if (bs) setNum("battRight", SW - (S.battX + bs[0] * SW));
     var bf = r.num("screen", "batteryIndicator", null, "fontSize");
     if (bf) setNum("battSize", bf * SH * BOOST);
     px(r.num("screen", "batteryIndicator", null, "itemSpacing"), "x", "battGap");
@@ -1019,10 +1100,17 @@
     }
 
     // ---- background art (these themes bake the hint bar into it) ----
+    BG_TINT = {};
+    function bgTint(slot, view, tag, name) {
+      var c = r.colour(view, tag, name, "color");
+      if (c) BG_TINT[slot] = { css: c.hex, a: c.a };
+    }
     useArt(r.prop("system", "image", "staticBackground", "path") ||
            r.prop("system", "image", "background", "path"), "bgSystem");
+    bgTint("bgSystem", "system", "image", "background");
     useArt(r.prop("basic", "image", "background", "path") ||
            r.prop("basic", "image", "staticBackground", "path"), "bgGamelist");
+    bgTint("bgGamelist", "basic", "image", "background");
     useArt(r.prop("menu", "menuBackground", "menubg", "path"), "bgMenu");
 
     // background colour: fall back to the gamelist text colour's opposite is
@@ -1046,6 +1134,10 @@
         if (/^BPreplay/.test(S[k])) useFont(common, k);   // untouched by the lookups above
       });
     }
+
+    jobs.push(loadPatternExtras(doc, files, baseDir, r).then(function (res) {
+      if (res) { FRONT_EXTRAS = res.list; FRONT_GEO = res.geo; }
+    }));
 
     jobs.push(loadSystemLogos(files, baseDir).then(function (list) {
       if (!list.filter(function (e) { return e.src; }).length)
@@ -1212,9 +1304,10 @@
         background: css("barBg")
       }));
     }
+    var justify = { left: "flex-start", center: "center", right: "flex-end" };
     var clock = el("div", {
-      left: S.clockX + "px", top: S.clockY + "px", width: "220px", height: "32px",
-      display: "flex", alignItems: "center",
+      left: S.clockX + "px", top: S.clockY + "px", width: S.clockW + "px", height: "32px",
+      display: "flex", alignItems: "center", justifyContent: justify[S.clockAlign] || "flex-start",
       font: fontCss(S.clockSize, S.fClock), color: css("text")
     }, "04:20 AM");
     grab(clock, { x: { k: "clockX" }, y: { k: "clockY" } }, "Clock");
@@ -1233,12 +1326,16 @@
     // the wrapper spans the bar to right-align its contents, so only what you
     // can actually see takes the pointer
     var batt = el("div", {
-      left: "0px", top: S.battY + "px", width: (SW - S.battRight) + "px", height: "32px",
-      display: "flex", alignItems: "center", justifyContent: "flex-end", gap: S.battGap + "px",
+      left: S.battX + "px", top: S.battY + "px",
+      width: Math.max(0, (SW - S.battRight) - S.battX) + "px", height: "32px",
+      display: "flex", alignItems: "center",
+      justifyContent: justify[S.battAlign] || "flex-end", gap: S.battGap + "px",
       font: fontCss(S.battSize, S.stockBatteryFont ? S.fHelp : S.fBatt), color: css("text"),
       pointerEvents: "none"
     });
-    var battMap = { x: { k: "battRight", invert: true }, y: { k: "battY" } };
+    var battMap = S.battAlign === "left"
+      ? { x: { k: "battX" }, y: { k: "battY" } }
+      : { x: { k: "battRight", invert: true }, y: { k: "battY" } };
     if (ART.battery) {
       batt.appendChild(tinted({ position: "relative", width: "32px", height: "32px" },
         ART.battery.src, css("text")));
@@ -1331,7 +1428,7 @@
           : [[["B", "Back"]], [["A", "Select"]]];
     }
     var pillH = (S.engine === "stock" ? stockIconH() : S.helpIcon) + (S.engine === "stock" ? 0 : S.helpPadY * 2);
-    var top = SH - 8 - pillH;
+    var top = S.helpPosSet ? S.helpY : SH - 8 - pillH;
 
     groups.forEach(function (g, gi) {
       var box = el("div", {
@@ -1343,7 +1440,13 @@
       });
       g.forEach(function (c) { box.appendChild(chip(c[0], c[1])); });
       grab(box, { x: { k: "helpMargin", invert: gi !== 0 && !S.stockPrompts } }, "Hint bar");
-      if (S.stockPrompts) {
+      if (S.helpPosSet) {
+        box.style.left = S.helpX + "px";
+        box.style.gap = S.engine === "stock" ? "16px" : "22px";
+        if (S.helpOx || S.helpOy)
+          box.style.transform = "translate(" + (-S.helpOx * 100) + "%," + (-S.helpOy * 100) + "%)";
+        grab(box, { x: { k: "helpX" }, y: { k: "helpY" } }, "Hint bar");
+      } else if (S.stockPrompts) {
         // stock lays the row out left to right from its themed position with a
         // fixed 16px between entries, and simply runs off the edge if it is
         // too wide (HelpComponent.cpp:16, 89) - no spreading, no scaling
@@ -1383,6 +1486,33 @@
     });
     im.src = hit.extra; im.alt = "";
     scr.appendChild(im);
+  }
+
+  function drawFrontExtra(scr) {
+    if (!FRONT_EXTRAS.length || !FRONT_GEO) return;
+    var names = sysList();
+    var idx = ((cursor % names.length) + names.length) % names.length;
+    var hit = FRONT_EXTRAS[idx % FRONT_EXTRAS.length];
+    if (!hit) return;
+    var g = FRONT_GEO;
+    var style = {
+      left: (g.x - g.ox * g.w) + "px", top: (g.y - g.oy * g.h) + "px",
+      width: g.w + "px", height: g.h + "px"
+    };
+    var node;
+    if (g.tint && !isWhite(g.tint.css)) {
+      node = tinted(style, hit.src, g.tint.css);
+      if (g.fit === "fill") {
+        node.style.backgroundSize = "100% 100%";
+        if (node.firstChild) node.firstChild.style.webkitMaskSize = node.firstChild.style.maskSize = "100% 100%";
+      }
+      if (g.tint.a < 100) node.style.opacity = g.tint.a / 100;
+    } else {
+      node = el("img", style);
+      node.style.objectFit = g.fit === "fill" ? "fill" : "contain";
+      node.src = hit.src; node.alt = "";
+    }
+    scr.appendChild(node);
   }
 
   function drawCarousel(scr) {
@@ -1740,8 +1870,24 @@
   function drawBackdrop(scr) {
     var slot = page === "gamelist" ? "bgGamelist" : (page === "menu" ? "bgMenu" : "bgSystem");
     if (!ART[slot]) return;
+    var tint = BG_TINT[slot];
+    // Themes paint a flat background by stretching a plain white tile and
+    // colouring it - the engine multiplies image art by <color>, so ignoring
+    // that leaves the tile the white it is on disk.
+    if (tint && !isWhite(tint.css)) {
+      var d = tinted({ left: "0px", top: "0px", width: SW + "px", height: SH + "px" },
+        ART[slot].src, tint.css);
+      d.style.backgroundSize = "100% 100%";
+      if (d.firstChild) {
+        d.firstChild.style.webkitMaskSize = d.firstChild.style.maskSize = "100% 100%";
+      }
+      if (tint.a < 100) d.style.opacity = tint.a / 100;
+      scr.appendChild(d);
+      return;
+    }
     var im = el("img", { left: "0px", top: "0px", width: SW + "px", height: SH + "px", objectFit: "fill" });
     im.src = ART[slot].src; im.alt = "";
+    if (tint && tint.a < 100) im.style.opacity = tint.a / 100;
     scr.appendChild(im);
   }
 
@@ -1826,7 +1972,13 @@
     else if (page === "popup") { drawTopBar(scr); drawCarousel(scr); drawSystemInfo(scr); drawHelp(scr); drawPopup(scr); }
     else {
       drawTopBar(scr);
-      if (page === "carousel") { drawSystemExtra(scr); drawCarousel(scr); drawSystemInfo(scr); }
+      if (page === "carousel") {
+        drawSystemExtra(scr);
+        if (FRONT_GEO && FRONT_GEO.z <= 40) drawFrontExtra(scr);
+        drawCarousel(scr);
+        if (FRONT_GEO && FRONT_GEO.z > 40) drawFrontExtra(scr);
+        drawSystemInfo(scr);
+      }
       else if (page === "gamelist") drawGamelist(scr);
       else { drawMenu(scr); drawMenuFooter(scr); }
       drawHelp(scr);
@@ -1892,6 +2044,9 @@
           ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
           : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
     // dragging is only discoverable if something says so
+    if (S.helpPosSet && (S.helpX >= SW || S.helpY >= SH || S.helpX < -SW || S.helpY < 0))
+      parts.push("<b>hint bar is off-screen</b> — the theme places it at " +
+        Math.round(S.helpX) + "," + Math.round(S.helpY) + ", so the device shows none of it");
     if (page !== "menu" && page !== "popup" && page !== "saver")
       parts.push("<b>drag</b> anything on the screen to place it");
     document.getElementById("legend").innerHTML = parts.join(" · ") + themeNote();
@@ -2033,8 +2188,13 @@
       x.push('        <helpsystem name="help">');
       x.push('\t<fontPath>./fonts/' + S.fHelp + '</fontPath>');
       if (S.engine === "custom") x.push('\t<visible>' + (S.helpShow ? 'true' : 'false') + '</visible>');
-      x.push('\t<pos>' + f(S.helpMargin / SW, 6) + ' ' + f((SH - 8 - (S.helpIcon + S.helpPadY * 2) + S.helpPadY) / SH, 6) + '</pos>');
-      x.push('\t<origin>0 0</origin>');
+      if (S.helpPosSet) {
+        x.push('\t<pos>' + f(S.helpX / SW, 6) + ' ' + f(S.helpY / SH, 6) + '</pos>');
+        x.push('\t<origin>' + f(S.helpOx, 4) + ' ' + f(S.helpOy, 4) + '</origin>');
+      } else {
+        x.push('\t<pos>' + f(S.helpMargin / SW, 6) + ' ' + f((SH - 8 - (S.helpIcon + S.helpPadY * 2) + S.helpPadY) / SH, 6) + '</pos>');
+        x.push('\t<origin>0 0</origin>');
+      }
       x.push('\t<fontSize>' + fontFrac(S.helpFont) + '</fontSize><!-- ' + S.helpFont + 'px -->');
       x.push('\t<textColor>' + hex8("helpText") + '</textColor>');
       x.push('\t<iconColor>' + hex8("helpChip") + '</iconColor>');
@@ -2156,7 +2316,8 @@
     x.push('    </text>');
     x.push('\t<batteryIndicator name="batteryIndicator">');
     x.push('\t<color>' + hex8("text") + '</color>');
-    x.push('\t<pos>0 ' + f(S.battY / SH, 6) + '</pos><size>' + f((SW - S.battRight) / SW, 6) + ' 0.0666667</size><!-- right edge ' + S.battRight + 'px in -->');
+    x.push('\t<pos>' + f(S.battX / SW, 6) + ' ' + f(S.battY / SH, 6) + '</pos><size>' + f(Math.max(0, (SW - S.battRight) - S.battX) / SW, 6) + ' 0.0666667</size><!-- right edge ' + S.battRight + 'px in -->');
+    x.push('\t<horizontalAlignment>' + S.battAlign + '</horizontalAlignment>');
     x.push('\t<horizontalAlignment>right</horizontalAlignment>');
     if (!S.stockBatteryFont) {
       x.push('\t<fontPath>./fonts/' + S.fBatt + '</fontPath>');
@@ -2266,6 +2427,9 @@
     { name: "Status bar · Clock", fields: [
       { k: "fClock", t: "font", label: "Font" },
       { k: "clockSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
+      { k: "clockAlign", t: "choice", label: "Alignment",
+        choices: [["left", "Left"], ["center", "Centre"], ["right", "Right"]] },
+      { k: "clockW", t: "num", label: "Box width", min: 40, max: 640, step: 2, unit: "px" },
       { k: "clockX", t: "num", label: "Left position", min: 0, max: 640, step: 1, unit: "px" },
       { k: "clockY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" }
     ]},
@@ -2273,6 +2437,10 @@
       { k: "stockBatteryFont", t: "bool", label: "Use the UI font (stock)", hint: "Stock EmulationStation draws the battery in its own font; choosing one here needs this build." },
       { k: "fBatt", t: "font", label: "Font" },
       { k: "battSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
+      { k: "battAlign", t: "choice", label: "Alignment",
+        choices: [["left", "Left"], ["center", "Centre"], ["right", "Right"]],
+        hint: "Where the icon and percentage sit inside their box. The engine's own default is left." },
+      { k: "battX", t: "num", label: "Box left edge", min: 0, max: 620, step: 1, unit: "px" },
       { k: "battRight", t: "num", label: "Right margin", min: 0, max: 620, step: 1, unit: "px" },
       { k: "battY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" },
       { k: "battGap", t: "num", label: "Icon to text gap", min: 0, max: 24, step: 1, unit: "px" }

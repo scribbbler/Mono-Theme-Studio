@@ -96,6 +96,16 @@ merge across files the way the engine merges them, so a carousel defined in one
 file and adjusted in another keeps both halves. Carousels can be horizontal as
 well as vertical.
 
+Placement comes from the theme rather than from assumptions about it: the
+status bar honours each element's box, its `alignment` and the battery's
+`horizontalAlignment` (whose engine default is *left* — the Mono themes are the
+ones opting into right), background art is multiplied by its `<color>` the way
+the engine multiplies it, per-system art declared as an extra is drawn and
+layered by its `zIndex`, and the hint bar goes where the theme puts it. That
+last one matters: a theme can hide the hint bar by parking it past a screen
+edge, and several do, so the preview showing an empty foot of the screen is the
+theme's decision, not a missing feature. The legend says so when it happens.
+
 One caveat worth knowing, because it decides what you see: **this fork has no
 `ifSubset` support.** A theme that guards blocks with `ifSubset` — Art Book Next
 is the well-known one — has every guarded block applied on the device, in file
