@@ -3173,21 +3173,13 @@
   var ART_NOTE = { t: "note", label: "Load an SVG or PNG to preview it here, then copy that file into the theme's art folder under the path shown. The engine tints these to the colours above." };
 
   var GENERAL = [
-    { name: "Palette", open: true, fields: [
-      { k: "bgSys", t: "color", label: "Carousel background" },
-      { k: "bgGl", t: "color", label: "Gamelist background" },
-      { k: "bgMnu", t: "color", label: "Menu & keyboard background",
-        hint: "The keyboard popup reads the menu's background, so these are one setting on the device." },
-      { k: "bg", t: "color", label: "Screensaver background" },
-      { t: "note", label: "Each page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. Load art below and it draws over the fill." },
+    { name: "Text & selection", open: true, fields: [
       { k: "text", t: "color", label: "Text" },
       { k: "pill", t: "color", label: "Selection pill" },
       { k: "pillGrad", t: "bool", label: "Gradient pill", hint: "Fades from the pill colour to the second colour, top to bottom." },
       { k: "pillEnd", t: "color", label: "Pill gradient end" },
       { k: "pillText", t: "color", label: "Text on pill" },
-      { k: "helpPill", t: "color", label: "Hint bar pill" },
-      { k: "helpText", t: "color", label: "Hint bar text" },
-      { k: "helpChip", t: "color", label: "Button circles" }
+      { t: "note", label: "The carousel, the gamelist and the menu all draw with these, so they are set once here. Each page's own background lives on that page." }
     ]},
     { name: "Fonts", open: true, fields: [
       { t: "library" },
@@ -3244,6 +3236,9 @@
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
+      { k: "helpPill", t: "color", label: "Pill" },
+      { k: "helpText", t: "color", label: "Label text" },
+      { k: "helpChip", t: "color", label: "Button circles" },
       { k: "stockPrompts", t: "bool", label: "Stock button set", hint: "Stock EmulationStation decides which buttons appear — a theme cannot hide them. This build trims them instead." },
       { t: "note", label: "Stock draws its own button glyphs at a size it derives from the hint font, 8px from the label and 16px apart. A theme may point those slots at its own images, but not resize, respace, relabel or hide them." },
       { k: "helpPillOn", t: "bool", label: "Pill behind the hints", hint: "Stock EmulationStation draws the hints with no pill; the pill is this build's addition." },
@@ -3263,7 +3258,11 @@
   ];
 
   var PAGE_GROUPS = {
-    carousel: [{ name: "Carousel", open: true, fields: [
+    carousel: [{ name: "Background", open: true, fields: [
+      { k: "bgSys", t: "color", label: "Carousel background", },
+      { t: "note", label: "The page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. A theme that ships real art for this page uses that instead, tinted the same way." }
+    ]},
+    { name: "Carousel", open: true, fields: [
       { k: "listScroll", t: "bool", label: "List-style navigation", hint: "Selection walks the rows and the list scrolls, like a gamelist." },
       { k: "carFit", t: "bool", label: "Pill hugs the name" },
       { k: "carRows", t: "num", label: "Visible rows", min: 1, max: 12, step: 1 },
@@ -3297,7 +3296,11 @@
     ].concat(artFields(["sysLogo"])).concat([
       { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). They are fitted inside the logo box keeping their aspect, the engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
     ]) }],
-    gamelist: [{ name: "Gamelist", open: true, fields: [
+    gamelist: [{ name: "Background", open: true, fields: [
+      { k: "bgGl", t: "color", label: "Gamelist background", },
+      { t: "note", label: "The page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. A theme that ships real art for this page uses that instead, tinted the same way." }
+    ]},
+    { name: "Gamelist", open: true, fields: [
       { k: "glFit", t: "bool", label: "Pill hugs the name" },
       { t: "sub", label: "List" },
       { k: "glTop", t: "num", label: "Top", min: 44, max: 140, step: 1, unit: "px" },
@@ -3328,7 +3331,11 @@
         hint: "Three scraped screenshots to check the box against real artwork. Load your own above to replace it." },
       { t: "note", label: "Game art is each game's scraped image, so the theme sets only where it goes — the file here is a stand-in and is never written into the theme or the zip. The box below is exported as a centred anchor plus the sizing property, so art of any shape stays inside it." }
     ]) }],
-    menu: [{ name: "Menu", open: true, fields: [
+    menu: [{ name: "Background", open: true, fields: [
+      { k: "bgMnu", t: "color", label: "Menu background", hint: "The keyboard reads the menu's background, so this one colour paints both.", },
+      { t: "note", label: "The page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. A theme that ships real art for this page uses that instead, tinted the same way." }
+    ]},
+    { name: "Menu", open: true, fields: [
       { t: "sub", label: "Colours" },
       { k: "menuOwn", t: "bool", label: "Own menu colours",
         hint: "Off, the menu borrows the carousel's. On, it carries its own, as menuText allows." },
@@ -3347,7 +3354,10 @@
     ].concat(artFields(["arrow"])).concat([
       { t: "note", label: "Row pitch and pill width come from the build (38px / 620px); the fonts and colours above are yours." }
     ]) }],
-    keyboard: [
+    keyboard: [{ name: "Background", open: true, fields: [
+      { k: "bgMnu", t: "color", label: "Keyboard background", hint: "The keyboard reads the menu's background, so this one colour paints both.", },
+      { t: "note", label: "The page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. A theme that ships real art for this page uses that instead, tinted the same way." }
+    ]},
       { name: "Keyboard", open: true, fields: [
         { t: "sub", label: "Keys" },
         { k: "kbKey", t: "color", label: "Key fill" },
@@ -3370,7 +3380,10 @@
       ]},
       { name: "Key icons", fields: artFields(["kbBackspace", "kbEnter", "kbShiftIcon", "kbShiftOn"]).concat([ART_NOTE]) }
     ],
-    saver: [
+    saver: [{ name: "Background", open: true, fields: [
+      { k: "bg", t: "color", label: "Screensaver background", },
+      { t: "note", label: "The page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. A theme that ships real art for this page uses that instead, tinted the same way." }
+    ]},
       { name: "Screensaver", open: true, fields: [
         { t: "sub", label: "Clock" },
         { k: "ssClock", t: "num", label: "Size", min: 40, max: 180, step: 2, unit: "px" },

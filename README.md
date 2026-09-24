@@ -57,8 +57,8 @@ lands in the middle of one.
   One pixel dragged is one pixel of the 640×480 screen whatever the mock-up is
   scaled to, a readout names the properties as they change, and values still
   stop at the same limits the sliders use. Works with touch.
-- **Background fills** — a colour per page (carousel, gamelist, menu-and-keyboard,
-  screensaver) instead of shipping a 640×480 image for each. The format has no
+- **Background fills** — a colour per page, set on that page's own panel,
+  instead of shipping a 640×480 image for each. The format has no
   "fill this view with a colour" element, so each page keeps the background image
   element it normally uses and points it at a 69-byte white pixel, which the
   engine stretches and multiplies by your colour. Load real background art for a
