@@ -90,7 +90,9 @@ so you can walk a theme instead of inspecting it screen by screen.
   view, which is what a game with no scraped art shows, keeps its full width.
   Load a sample image to see either in place.
 
-The five **Mono** themes load as presets, so you can start from one and adjust.
+The six **Mono** themes load as presets, so you can start from one and adjust —
+including **Mono Max**, which shows each system's logo instead of its name; its
+logos ride along so the carousel previews properly out of the box.
 
 ![The general settings panel](docs/screenshot-general.png)
 
