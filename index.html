@@ -1987,7 +1987,7 @@
           scr.appendChild(el("div", {
             left: x + "px", top: y + "px", width: w + "px", height: keyH + "px",
             display: "flex", alignItems: "center", justifyContent: "center",
-            font: fontCss(Math.round(keyH * 0.5), S.fMenu), color: ink
+            font: fontCss(S.menuFont, S.fMenu), color: ink
           }, glyph));
         }
         c += span;
@@ -2005,7 +2005,7 @@
       scr.appendChild(el("div", {
         left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
         display: "flex", alignItems: "center", justifyContent: "center",
-        font: fontCss(Math.round(Math.min(keyH * 0.42, 22)), S.fMenu), color: css("text"),
+        font: fontCss(S.menuFont, S.fMenu), color: css("text"),
         whiteSpace: "nowrap", overflow: "hidden"
       }, b[0]));
     });
