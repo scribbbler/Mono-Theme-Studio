@@ -58,8 +58,11 @@ so you can walk a theme instead of inspecting it screen by screen.
 - **Pill geometry** — height, radius, fixed width or hug-the-text with padding
   and a maximum, plus list-style carousel navigation.
 - **Swappable art** — battery, A/B/X/Y buttons, menu arrow, keyboard
-  backspace/enter/shift icons, screensaver lock, pop-up icons. Load a file to
-  preview it and set the path written into the theme.
+  backspace/enter/shift icons, screensaver lock, pop-up icons. The presets come
+  with the Mono themes' own files, so a preset previews with the icons it
+  actually ships rather than stand-in glyphs; load your own to replace one and
+  set the path written into the theme. Opening a theme clears them, so you see
+  that theme's art and nothing borrowed.
 - **Screen overlay** — a full-screen PNG over the whole interface (scanlines,
   LCD grid, dot matrix) with opacity and pixelated scaling, exported as a high
   z-index extra image.
