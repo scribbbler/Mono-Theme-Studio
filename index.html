@@ -1869,7 +1869,7 @@
     // splits that between the rows (GuiTextEditPopupKeyboard.cpp:399), so keys
     // are as tall as the space allows - not square cells the width of a column.
     var PADY = SW * 0.01;                       // OSK_PADDINGY
-    var rowPitch = (SH - S.kbTop - PADY) / (KB_ROWS.length + 1);
+    var rowPitch = (SH - S.kbTop - PADY - inset) / (KB_ROWS.length + 1);
     var keyH = rowPitch - S.kbSpacing;
 
     // title + text field, as the search popup shows them
