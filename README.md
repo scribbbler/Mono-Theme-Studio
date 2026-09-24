@@ -35,12 +35,12 @@ so you can walk a theme instead of inspecting it screen by screen.
   scaled to, a readout names the properties as they change, and values still
   stop at the same limits the sliders use. Works with touch.
 - **Background fills** — a colour per page (carousel, gamelist, menu-and-keyboard,
-  screensaver) instead of shipping a background image for each. The format has no
-  "fill this view with a colour" element, so the carousel and gamelist are written
-  as a text box with a `backgroundColor` and no text, which paints its whole area.
-  The menu is the exception: its background falls back to the engine's rounded
-  frame when no path is given, so it gets a 69-byte white pixel to stretch and
-  tint. Load background art and it draws over the fill instead.
+  screensaver) instead of shipping a 640×480 image for each. The format has no
+  "fill this view with a colour" element, so each page keeps the background image
+  element it normally uses and points it at a 69-byte white pixel, which the
+  engine stretches and multiplies by your colour. Load real background art for a
+  page and its own file is used instead, tinted the same way — so a theme can
+  start as three hex values and grow into artwork one page at a time.
 - **Colour and opacity per layer** — every colour has an opacity slider, because
   the engine expresses opacity as the alpha byte of the colour.
 - **Gradient selections** — a second colour fades top-to-bottom across the
