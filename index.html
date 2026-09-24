@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mono Theme Studio</title>
 <style>
@@ -14,81 +15,101 @@
     font-display: block;
   }
 
+  /* ------------------------------------------------------------------
+     Base Web's design language, rebuilt in plain CSS. Values are the ones
+     the library ships: the grey ramps and accents from its colour
+     primitives, the 2/4/6/8/10/12/16... sizing scale, its 8px input and
+     button radii against square surfaces and checkboxes, and its 14px/500
+     labels over 12px secondary text. No React, no Styletron, no build.
+     ------------------------------------------------------------------ */
   :root {
-    --ground: #eef3f3;
-    --surface: #ffffff;
-    --surface-2: #f6fafa;
-    --ink: #101819;
-    --muted: #5b6b6d;
-    --line: #d9e3e3;
-    --accent: #0a6c76;
-    --accent-ink: #ffffff;
-    --accent-soft: #dff0f1;
-    --shadow: 0 1px 2px rgba(16, 24, 25, .06), 0 8px 24px rgba(16, 24, 25, .06);
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    /* colour - light theme semantics */
+    --bg: #FFFFFF;              /* backgroundPrimary   */
+    --bg-2: #F3F3F3;            /* backgroundSecondary */
+    --bg-3: #E8E8E8;            /* backgroundTertiary  */
+    --content: #000000;         /* contentPrimary      */
+    --content-2: #4B4B4B;       /* contentSecondary    */
+    --content-3: #5E5E5E;       /* contentTertiary     */
+    --content-inverse: #FFFFFF;
+    --border: #DDDDDD;          /* gray200, for visible dividers */
+    --border-selected: #000000;
+    --accent: #276EF1;          /* blue600 */
+    --ground: #FFFFFF;
+    --overlay: rgba(0, 0, 0, .3);
+
+    /* sizing scale */
+    --s100: 4px;  --s200: 6px;  --s300: 8px;  --s400: 10px; --s500: 12px;
+    --s550: 14px; --s600: 16px; --s650: 18px; --s700: 20px; --s800: 24px;
+    --s850: 28px; --s900: 32px; --s950: 36px; --s1000: 40px; --s1200: 48px;
+
+    /* borders */
+    --r-input: 8px;   --r-button: 8px;  --r-mini: 4px;
+    --r-surface: 0px; --r-check: 0px;   --r-pop: 8px;
+
+    /* type */
+    --sans: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "Lucida Console", Monaco, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground: #0c1112;
-      --surface: #141b1c;
-      --surface-2: #101718;
-      --ink: #e7eeee;
-      --muted: #8a9b9d;
-      --line: #223032;
-      --accent: #4ac8d3;
-      --accent-ink: #062023;
-      --accent-soft: #0f292c;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+      --bg: #161616; --bg-2: #292929; --bg-3: #383838;
+      --content: #DEDEDE; --content-2: #C4C4C4; --content-3: #ABABAB;
+      --content-inverse: #000000;
+      --border: #383838; --border-selected: #DEDEDE;
+      --accent: #335BA3; --ground: #000000;
+      --overlay: rgba(0, 0, 0, .7);
     }
   }
   :root[data-theme="dark"] {
-    --ground: #0c1112;
-    --surface: #141b1c;
-    --surface-2: #101718;
-    --ink: #e7eeee;
-    --muted: #8a9b9d;
-    --line: #223032;
-    --accent: #4ac8d3;
-    --accent-ink: #062023;
-    --accent-soft: #0f292c;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+    --bg: #161616; --bg-2: #292929; --bg-3: #383838;
+    --content: #DEDEDE; --content-2: #C4C4C4; --content-3: #ABABAB;
+    --content-inverse: #000000;
+    --border: #383838; --border-selected: #DEDEDE;
+    --accent: #335BA3; --ground: #000000;
+    --overlay: rgba(0, 0, 0, .7);
   }
 
   * { box-sizing: border-box; }
   body {
     margin: 0;
     background: var(--ground);
-    color: var(--ink);
+    color: var(--content);
     font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.45;
+    font-size: 14px;        /* font200 */
+    line-height: 20px;
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  h1, h2, h3 { margin: 0; font-weight: 500; letter-spacing: 0; }
   button, input, select { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  /* Base marks focus with a 3px ring in the selected-border colour */
+  :focus-visible { outline: 3px solid var(--border-selected); outline-offset: 2px; border-radius: 0; }
 
   /* ---------- shell ---------- */
   header.bar {
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    padding: 14px max(20px, calc((100% - 1300px) / 2));
-    background: var(--surface); border-bottom: 1px solid var(--line);
+    padding: var(--s500) max(var(--s700), calc((100% - 1300px) / 2));
+    background: var(--bg); border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 20;
   }
   .brand { display: flex; align-items: baseline; gap: 10px; }
-  .brand h1 { font-size: 16px; }
-  .brand span { color: var(--muted); font-size: 12.5px; }
+  .brand h1 { font-size: 20px; font-weight: 500; }
+  .brand span { color: var(--content-3); font-size: 12px; }
   .presets { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 
+  /* Button - tertiary by default, 8px radius, 14px/500, no border */
   .btn {
-    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
-    padding: 6px 11px; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 550;
-    transition: background .12s ease, border-color .12s ease;
+    border: 0; background: var(--bg-3); color: var(--content);
+    padding: 0 var(--s600); height: var(--s950); line-height: 36px;
+    border-radius: var(--r-button); cursor: pointer;
+    font-size: 14px; font-weight: 500; letter-spacing: 0;
+    transition: background .15s ease, color .15s ease;
   }
-  .btn:hover { border-color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .btn:hover { background: color-mix(in srgb, var(--bg-3) 70%, var(--content) 12%); }
+  .btn:active { background: color-mix(in srgb, var(--bg-3) 55%, var(--content) 20%); }
+  /* primary - the inverse fill Base uses for its main action */
+  .btn.primary { background: var(--content); color: var(--content-inverse); }
+  .btn.primary:hover { background: color-mix(in srgb, var(--content) 82%, var(--bg)); }
+  .btn.on { background: var(--content); color: var(--content-inverse); }
 
   main {
     display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0;
@@ -96,49 +117,110 @@
     width: 100%; max-width: 1300px; margin: 0 auto;
   }
   /* ---------- control rail ---------- */
-  .rail { border-right: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); }
+  .rail { border-right: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--bg); }
   .railtabs {
-    display: flex; gap: 6px; padding: 12px 18px; border-bottom: 1px solid var(--line);
-    position: sticky; top: 57px; background: var(--surface); z-index: 5;
+    display: flex; gap: 0; padding: 0 var(--s650); border-bottom: 1px solid var(--border);
+    position: sticky; top: 61px; background: var(--bg); z-index: 5;
   }
-  .railtabs .btn { flex: 1; }
-  details.group { border-bottom: 1px solid var(--line); }
+  .railtabs .btn {
+    flex: 1; background: none; border-radius: 0; height: 48px; line-height: 48px;
+    color: var(--content-3); box-shadow: inset 0 -5px 0 0 transparent;
+    transition: color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .railtabs .btn:hover { background: var(--bg-2); color: var(--content); }
+  .railtabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
+  details.group { border-bottom: 1px solid var(--border); }
+  /* Accordion - 16px/500 title, chevron on the right, divider above */
   details.group > summary {
-    cursor: pointer; padding: 12px 18px; font-size: 11.5px; font-weight: 700;
-    letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
-    display: flex; align-items: center; gap: 8px; list-style: none;
+    cursor: pointer; padding: var(--s600) var(--s650); font-size: 16px; font-weight: 500;
+    letter-spacing: 0; text-transform: none; color: var(--content);
+    display: flex; align-items: center; gap: var(--s300); list-style: none;
+    transition: background .15s ease;
   }
+  details.group > summary:hover { background: var(--bg-2); }
   details.group > summary::-webkit-details-marker { display: none; }
-  details.group > summary::before {
-    content: "›"; font-size: 15px; transition: transform .15s ease; display: inline-block; color: var(--accent);
+  details.group > summary::after {
+    content: ""; margin-left: auto; width: 10px; height: 10px;
+    border-right: 2px solid var(--content); border-bottom: 2px solid var(--content);
+    transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s ease;
   }
-  details.group[open] > summary::before { transform: rotate(90deg); }
+  details.group[open] > summary::after { transform: rotate(225deg) translate(-3px, -3px); }
   .fields { padding: 2px 18px 16px; display: flex; flex-direction: column; gap: 11px; }
 
   .field { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
-  .field > label { font-size: 12.5px; color: var(--ink); }
-  .field .hint { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: -4px; }
+  .field > label { font-size: 14px; font-weight: 500; line-height: 16px; color: var(--content); }
+  .field .hint { grid-column: 1 / -1; font-size: 12px; line-height: 16px; color: var(--content-3); margin-top: 0; }
   .field .row { display: flex; align-items: center; gap: 8px; }
-  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  /* Slider - a thin tertiary track, filled to the value in the primary
+     content colour, with a round thumb. --fill is set as the value changes. */
+  input[type="range"] {
+    width: 100%; height: 24px; margin: 0; background: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right,
+      var(--content) 0 var(--fill, 50%), var(--bg-3) var(--fill, 50%) 100%);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; margin-top: -8px; border-radius: 50%;
+    background: var(--content); border: 0;
+    box-shadow: 0 0 0 0 var(--overlay); transition: box-shadow .15s ease;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 6px color-mix(in srgb, var(--content) 14%, transparent); }
+  input[type="range"]:active::-webkit-slider-thumb { box-shadow: 0 0 0 9px color-mix(in srgb, var(--content) 18%, transparent); }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--bg-3); }
+  input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--content); }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--content); border: 0;
+  }
   .field.slider { grid-template-columns: 1fr; }
   .field.slider .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
+  .fields { gap: var(--s600) !important; }
+  /* Input - filled, borderless until focus, then a 2px selected border */
   input[type="color"] {
-    width: 34px; height: 24px; padding: 0; border: 1px solid var(--line);
-    border-radius: 5px; background: none; cursor: pointer;
+    width: 44px; height: 32px; padding: 2px; cursor: pointer;
+    background: var(--bg-2); border: 2px solid transparent; border-radius: var(--r-mini);
   }
+  input[type="color"]:hover { border-color: var(--border); }
   input[type="text"].hex {
-    width: 84px; font-family: var(--mono); font-size: 12px; text-transform: uppercase;
-    padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2);
+    width: 96px; height: 32px; font-family: var(--mono); font-size: 13px; text-transform: uppercase;
+    padding: 0 var(--s300); background: var(--bg-2); color: var(--content);
+    border: 2px solid transparent; border-radius: var(--r-mini);
+    transition: border-color .15s ease, background .15s ease;
   }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  input[type="text"].hex:hover { background: var(--bg-3); }
+  input[type="text"].hex:focus {
+    outline: none; border-color: var(--border-selected); background: var(--bg-2);
+  }
+  /* Segmented control - a tertiary track with an inverse selected segment */
+  .seg { display: inline-flex; background: var(--bg-3); border-radius: var(--r-button); padding: 2px; gap: 2px; }
   .seg button {
-    border: 0; background: var(--surface-2); padding: 5px 10px; cursor: pointer;
-    font-size: 12px; font-weight: 550; color: var(--muted);
+    border: 0; background: none; padding: 0 var(--s500); height: 32px; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--content-3);
+    border-radius: var(--r-mini); transition: background .15s ease, color .15s ease;
   }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-  .switch input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .seg button:hover { color: var(--content); }
+  .seg button[aria-pressed="true"] { background: var(--bg); color: var(--content); }
+  /* Checkbox - square, as Base sets checkboxBorderRadius to 0 */
+  .switch { display: inline-flex; align-items: center; gap: var(--s300); cursor: pointer; }
+  .switch input {
+    -webkit-appearance: none; appearance: none; margin: 0;
+    width: 20px; height: 20px; border-radius: var(--r-check);
+    background: var(--bg-3); border: 2px solid transparent; cursor: pointer;
+    display: grid; place-content: center; transition: background .15s ease, border-color .15s ease;
+  }
+  .switch input:hover { border-color: var(--border); }
+  .switch input::before {
+    content: ""; width: 12px; height: 12px; transform: scale(0);
+    transition: transform .12s ease;
+    background: var(--content-inverse);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 85% 0, 43% 71%);
+  }
+  .switch input:checked { background: var(--content); border-color: var(--content); }
+  .switch input:checked::before { transform: scale(1); }
 
   /* ---------- stage ---------- */
   /* anything the theme positions can be dragged straight on the preview */
@@ -147,45 +229,52 @@
   .grabbable:hover { outline: 1px dashed rgba(148,163,184,.85); outline-offset: 2px; }
   .grabbable.corner:hover { outline-offset: 0; }
   .stage { padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
-  .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .tabs { display: flex; gap: 0; flex-wrap: wrap; justify-content: center; border-bottom: 1px solid var(--border); }
+  .tabs .btn {
+    background: none; border-radius: 0; height: 48px; line-height: 48px; color: var(--content-3);
+    box-shadow: inset 0 -5px 0 0 transparent;
+    transition: color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .tabs .btn:hover { background: var(--bg-2); color: var(--content); }
+  .tabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
   .console {
     position: relative; width: 820px; height: 1150px;
     transform-origin: top left;
   }
   .console .shell {
     position: absolute; inset: 0; width: 100%; height: 100%;
-    color: var(--muted); opacity: .45; pointer-events: none;
+    color: var(--content-3); opacity: .45; pointer-events: none;
   }
   .screen {
     position: absolute; left: 90px; top: 90px;
     width: 640px; height: 480px; overflow: hidden;
-    border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
+    border-radius: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
   }
   .screen * { position: absolute; }
   .hit { transition: background .12s ease; }
   .hit:hover { background: color-mix(in srgb, var(--accent) 22%, transparent) !important; }
   .hit:active { background: color-mix(in srgb, var(--accent) 40%, transparent) !important; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--muted); text-align: center; }
-  .legend b { color: var(--ink); font-weight: 600; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--content-3); text-align: center; }
+  .legend b { color: var(--content); font-weight: 600; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
   .export { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 10px; }
   .export .head { display: flex; align-items: center; gap: 10px; }
-  .export h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .export h2 { font-size: 16px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--content); }
   .export .actions { margin-left: auto; display: flex; gap: 6px; }
   pre.xml {
-    margin: 0; max-height: 340px; overflow: auto; background: var(--surface-2);
-    border: 1px solid var(--line); border-radius: 10px; padding: 14px;
-    font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--ink);
+    margin: 0; max-height: 340px; overflow: auto; background: var(--bg-2);
+    border: 0; border-radius: var(--r-surface); padding: var(--s600);
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--content);
     white-space: pre; tab-size: 2;
   }
   .note {
-    font-size: 12px; color: var(--muted); max-width: 66ch; border-left: 2px solid var(--accent);
-    padding-left: 12px;
+    font-size: 12px; line-height: 16px; color: var(--content-3); max-width: 66ch;
+    border-left: 2px solid var(--border); padding-left: var(--s500);
   }
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px);
-    background: var(--ink); color: var(--ground); padding: 8px 14px; border-radius: 8px;
-    font-size: 12.5px; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
+    background: var(--content); color: var(--content-inverse); padding: var(--s500) var(--s600);
+    border-radius: var(--r-surface); font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -217,8 +306,8 @@
     .rail {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
       max-height: 82dvh; display: flex; flex-direction: column;
-      border: 1px solid var(--line); border-bottom: 0;
-      border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border); border-bottom: 0;
+      border-radius: var(--r-pop) var(--r-pop) 0 0;
       box-shadow: 0 -8px 30px rgba(0, 0, 0, .28);
       transform: translateY(calc(100% - var(--peek)));
       transition: transform .22s cubic-bezier(.32, .72, 0, 1);
@@ -232,7 +321,7 @@
     }
     .grabber::before {
       content: ""; display: block; width: 42px; height: 4px; margin: 0 auto;
-      border-radius: 2px; background: var(--muted); opacity: .5;
+      border-radius: 2px; background: var(--content-3); opacity: .5;
     }
     .railtabs { top: 0; position: static; }
     .export { max-width: none; padding: 0 18px 20px; }
@@ -439,7 +528,8 @@
   Object.keys(PRESETS).forEach(function (name) {
     var p = PRESETS[name];
     for (var k in SHARED) if (!(k in p)) p[k] = SHARED[k];
-    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#C9C9C9" : "#0A0A0A";
+    // the values the shipped themes actually set in <keyColor>
+    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#F5F5F5" : "#0A0A0A";
     // each page paints its own fill; they start from the theme's base colour
     if (!("bgSys" in p)) p.bgSys = p.bg;
     if (!("bgGl" in p)) p.bgGl = p.bg;
@@ -1775,22 +1865,28 @@
     var left = (SW - S.kbWidth) / 2;
     var cell = S.kbWidth / cols;
     var inset = S.kbSpacing / 2;
-    var keyH = cell - S.kbSpacing;
+    // The engine gives the key grid whatever height is left below its top and
+    // splits that between the rows (GuiTextEditPopupKeyboard.cpp:399), so keys
+    // are as tall as the space allows - not square cells the width of a column.
+    var PADY = SW * 0.01;                       // OSK_PADDINGY
+    var rowPitch = (SH - S.kbTop - PADY) / (KB_ROWS.length + 1);
+    var keyH = rowPitch - S.kbSpacing;
 
     // title + text field, as the search popup shows them
     var KB = { y: { k: "kbTop" } };
     scr.appendChild(grab(el("div", {
-      left: left + "px", top: (S.kbTop - 76) + "px", width: S.kbWidth + "px", height: "26px",
-      display: "flex", alignItems: "center", textTransform: "uppercase",
+      left: left + "px", top: "12px", width: S.kbWidth + "px", height: "28px",
+      display: "flex", alignItems: "center", justifyContent: "center", textTransform: "uppercase",
       font: fontCss(20, S.fMenuTitle), color: css("text")
-    }, "Search".toUpperCase()), KB, "Keyboard"));
-    var fieldH = 36;
+    }, "Quick Search".toUpperCase()), KB, "Keyboard"));
+    var fieldH = 44;
+    var fieldY = S.kbTop - fieldH - 10;
     scr.appendChild(el("div", {
-      left: left + "px", top: (S.kbTop - 44) + "px", width: S.kbWidth + "px", height: fieldH + "px",
+      left: left + "px", top: fieldY + "px", width: S.kbWidth + "px", height: fieldH + "px",
       border: "2px solid " + css("text"), borderRadius: "8px", opacity: ".75"
     }));
     scr.appendChild(el("div", {
-      left: (left + 12) + "px", top: (S.kbTop - 44) + "px", height: fieldH + "px",
+      left: (left + 12) + "px", top: fieldY + "px", height: fieldH + "px",
       display: "flex", alignItems: "center", font: fontCss(20, S.fMenu), color: css("text")
     }, "mario|"));
 
@@ -1803,7 +1899,7 @@
         var isFocus = (kbFocus[0] === r && kbFocus[1] === c);
         var isFlash = isFocus && kbPressed;
         var x = left + c * cell + inset;
-        var y = S.kbTop + r * cell + inset;
+        var y = S.kbTop + r * rowPitch + inset;
         var w = cell * span - S.kbSpacing;
 
         var fill = isFlash ? css("kbPress") : (isFocus ? css("pill") : css("kbKey"));
@@ -1838,8 +1934,8 @@
     });
 
     // footer actions
-    var fy = S.kbTop + 4 * cell + inset;
-    [["Reset", 0, 3], ["Space", 3, 7], ["Cancel", 10, 3]].forEach(function (b) {
+    var fy = S.kbTop + KB_ROWS.length * rowPitch + inset;
+    [["RESET (X)", 0, 3], ["SPACE (R1)", 3, 7], ["CANCEL (B)", 10, 3]].forEach(function (b) {
       var x = left + b[1] * cell + inset, w = cell * b[2] - S.kbSpacing;
       scr.appendChild(el("div", {
         left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
@@ -1848,7 +1944,8 @@
       scr.appendChild(el("div", {
         left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
         display: "flex", alignItems: "center", justifyContent: "center",
-        font: fontCss(Math.round(keyH * 0.42), S.fMenu), color: css("text")
+        font: fontCss(Math.round(Math.min(keyH * 0.42, 22)), S.fMenu), color: css("text"),
+        whiteSpace: "nowrap", overflow: "hidden"
       }, b[0]));
     });
   }
@@ -2654,6 +2751,13 @@
     placeExport();
   }
 
+  // the track's filled portion is drawn from this, so it follows the value
+  function setFill(input) {
+    var min = parseFloat(input.min), max = parseFloat(input.max);
+    var pct = max > min ? ((parseFloat(input.value) - min) / (max - min)) * 100 : 0;
+    input.style.setProperty("--fill", pct.toFixed(2) + "%");
+  }
+
   function buildField(fd) {
     var wrap = el("div"); wrap.className = "field" + (fd.t === "num" || fd.t === "art" ? " slider" : "");
     // a property only this build reads is inert while previewing stock
@@ -2686,7 +2790,7 @@
       wrap.className = "field";
       wrap.appendChild(el("label", null, fd.label));
       var sel = document.createElement("select");
-      sel.style.cssText = "max-width:170px;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);";
+      sel.style.cssText = "max-width:170px;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg-2);";
       FONT_LIB.forEach(function (e) {
         var o = document.createElement("option");
         o.value = e.id; o.textContent = e.label;
@@ -2757,7 +2861,7 @@
       var isSample = ICONS.filter(function (i) { return i.k === fd.k; })[0].noPath;
       var pathIn = el("input"); pathIn.type = "text"; pathIn.value = PATHS[fd.k];
       if (isSample) pathIn.style.display = "none";
-      pathIn.style.cssText = "flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);";
+      pathIn.style.cssText = "flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg-2);";
       pathIn.addEventListener("change", function () { PATHS[fd.k] = pathIn.value.trim() || PATHS[fd.k]; renderXML(); });
       row0.appendChild(pick); row0.appendChild(clear);
       wrap.appendChild(top0); wrap.appendChild(row0);
@@ -2800,9 +2904,10 @@
         var aval = el("span", null, S[fd.k + "A"] + "%"); aval.className = "val";
         var ar = el("input"); ar.type = "range"; ar.min = 0; ar.max = 100; ar.step = 1;
         ar.value = S[fd.k + "A"]; ar.style.flex = "1";
+        setFill(ar);
         ar.addEventListener("input", function () {
           S[fd.k + "A"] = parseFloat(ar.value); aval.textContent = S[fd.k + "A"] + "%";
-          tx.value = shown();
+          tx.value = shown(); setFill(ar);
           render();
         });
         arow.appendChild(alab); arow.appendChild(ar); arow.appendChild(aval);
@@ -2822,8 +2927,10 @@
       var v = el("span", null, S[fd.k] + (fd.unit || "")); v.className = "val";
       top.appendChild(v);
       var r = el("input"); r.type = "range"; r.min = fd.min; r.max = fd.max; r.step = fd.step; r.value = S[fd.k];
+      setFill(r);
       r.addEventListener("input", function () {
-        S[fd.k] = parseFloat(r.value); v.textContent = S[fd.k] + (fd.unit || ""); render();
+        S[fd.k] = parseFloat(r.value); v.textContent = S[fd.k] + (fd.unit || "");
+        setFill(r); render();
       });
       wrap.appendChild(top); wrap.appendChild(r);
     }
