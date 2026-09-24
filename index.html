@@ -529,7 +529,7 @@
     var p = PRESETS[name];
     for (var k in SHARED) if (!(k in p)) p[k] = SHARED[k];
     // the values the shipped themes actually set in <keyColor>
-    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#FFFFFF" : "#0A0A0A";
+    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#FFFFFF" : "#1D1D1D";
     // each page paints its own fill; they start from the theme's base colour
     if (!("bgSys" in p)) p.bgSys = p.bg;
     if (!("bgGl" in p)) p.bgGl = p.bg;
