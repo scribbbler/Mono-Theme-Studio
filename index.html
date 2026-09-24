@@ -495,6 +495,7 @@
   var SHARED = {
     kbWidth: 624, kbTop: 116, kbSpacing: 6, kbRadius: 8, kbIcon: 24,
     kbPress: "#CCCCCC", kbFlash: 150, kbShift: false,
+    kbFontOn: false, kbFont: 23, fKbKey: "BPreplay-Bold.otf",
     ssClock: 100, ssLock: true, ssCharge: false,
     // per-layer typography: font file, uppercase, line spacing
     fCar: "BPreplay-Bold.otf", uCar: false, lsCar: 1.171,
@@ -1203,6 +1204,13 @@
     px(r.num("screen", "keyboard", null, "keyRadius"), "y", "kbRadius");
     px(r.num("screen", "keyboard", null, "iconSize"), "y", "kbIcon");
     setNum("kbFlash", r.num("screen", "keyboard", null, "keyPressMs"));
+    var kbFs = r.num("screen", "keyboard", null, "fontSize");
+    var kbFp = r.prop("screen", "keyboard", null, "fontPath");
+    if (kbFs != null || kbFp) {
+      S.kbFontOn = true;
+      if (kbFs != null) setNum("kbFont", kbFs * SH * BOOST);
+      if (kbFp) useFont(kbFp, "fKbKey");
+    } else S.kbFontOn = false;
     useArt(r.prop("screen", "keyboard", null, "backspace"), "kbBackspace");
     useArt(r.prop("screen", "keyboard", null, "enter"), "kbEnter");
     useArt(r.prop("screen", "keyboard", null, "shift"), "kbShiftIcon");
@@ -1912,6 +1920,11 @@
     return (ES_FONT_H[key] = Math.round(max) * 1.5);
   }
 
+  // Key letters inherit the menu row font unless the theme gives the keyboard
+  // its own, which this build allows via <keyboard><fontSize>/<fontPath>.
+  function kbLetterPx() { return S.kbFontOn ? S.kbFont : S.menuFont; }
+  function kbLetterFace() { return S.kbFontOn ? S.fKbKey : S.fMenu; }
+
   function drawKeyboard(scr) {
     var cols = 13;
     var left = (SW - S.kbWidth) / 2;
@@ -1987,7 +2000,7 @@
           scr.appendChild(el("div", {
             left: x + "px", top: y + "px", width: w + "px", height: keyH + "px",
             display: "flex", alignItems: "center", justifyContent: "center",
-            font: fontCss(S.menuFont, S.fMenu), color: ink
+            font: fontCss(kbLetterPx(), kbLetterFace()), color: ink
           }, glyph));
         }
         c += span;
@@ -2005,7 +2018,7 @@
       scr.appendChild(el("div", {
         left: x + "px", top: fy + "px", width: w + "px", height: keyH + "px",
         display: "flex", alignItems: "center", justifyContent: "center",
-        font: fontCss(S.menuFont, S.fMenu), color: css("text"),
+        font: fontCss(kbLetterPx(), kbLetterFace()), color: css("text"),
         whiteSpace: "nowrap", overflow: "hidden"
       }, b[0]));
     });
@@ -2577,6 +2590,10 @@
     x.push('');
     if (S.engine === "custom") {
     x.push('\t<keyboard name="keyboard">');
+    if (S.kbFontOn) {
+      x.push('\t<fontPath>./fonts/' + S.fKbKey + '</fontPath>');
+      x.push('\t<fontSize>' + fontFrac(S.kbFont) + '</fontSize><!-- ' + S.kbFont + 'px key letters -->');
+    }
     x.push('\t<backspace>' + PATHS.kbBackspace + '</backspace>');
     x.push('\t<enter>' + PATHS.kbEnter + '</enter>');
     x.push('\t<shift>' + PATHS.kbShiftIcon + '</shift>');
@@ -2779,12 +2796,16 @@
         { k: "kbKey", t: "color", label: "Key fill" },
         { k: "kbPress", t: "color", label: "Key press flash", hint: "Keys flash this colour when pressed." },
         { k: "kbFlash", t: "num", label: "Flash duration", min: 40, max: 400, step: 10, unit: "ms" },
+        { k: "kbFontOn", t: "bool", label: "Own letter font",
+          hint: "Off, the letters use the menu row font, which is what the engine does. On, the keyboard carries its own size and face." },
+        { k: "kbFont", t: "num", label: "Letter size", min: 10, max: 44, step: 1, unit: "px" },
+        { k: "fKbKey", t: "font", label: "Letter font" },
         { k: "kbWidth", t: "num", label: "Grid width", min: 400, max: 640, step: 2, unit: "px" },
         { k: "kbTop", t: "num", label: "Grid top", min: 60, max: 220, step: 2, unit: "px" },
         { k: "kbSpacing", t: "num", label: "Gap between keys", min: 0, max: 16, step: 1, unit: "px" },
         { k: "kbRadius", t: "num", label: "Key radius", min: 0, max: 22, step: 1, unit: "px" },
         { k: "kbIcon", t: "num", label: "Key icon size", min: 12, max: 40, step: 1, unit: "px" },
-        { t: "note", label: "Key letters use the menu row font — change it on the Menu screen." }
+        { t: "note", label: "Key letters follow the menu row font unless you give the keyboard its own above — the engine has no separate size for them otherwise." }
       ]},
       { name: "Key icons", fields: artFields(["kbBackspace", "kbEnter", "kbShiftIcon", "kbShiftOn"]).concat([ART_NOTE]) }
     ],
