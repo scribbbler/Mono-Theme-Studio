@@ -176,6 +176,20 @@
   .prop input.num:hover { background: var(--bg-3); }
   .prop input.num:focus { outline: none; border-color: var(--border-selected); background: var(--bg-2); }
 
+  /* Segmented control - a tertiary track with an inverse selected segment */
+  .seg {
+    display: inline-flex; background: var(--bg-3);
+    border-radius: var(--r-button); padding: 2px; gap: 2px;
+  }
+  .seg button {
+    border: 0; background: none; padding: 0 var(--s500); height: 32px; cursor: pointer;
+    white-space: nowrap; font-size: 14px; font-weight: 500; color: var(--content-3);
+    border-radius: var(--r-mini); transition: background .15s ease, color .15s ease;
+  }
+  .seg button:hover { color: var(--content); }
+  .seg button[aria-pressed="true"] { background: var(--bg); color: var(--content); }
+  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
+
   .field { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
   .field > .seg { justify-self: end; }
   /* a choice with long labels drops under its own label rather than squeezing */
