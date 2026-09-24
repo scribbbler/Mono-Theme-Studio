@@ -66,6 +66,11 @@ so you can walk a theme instead of inspecting it screen by screen.
 - **Screen overlay** — a full-screen PNG over the whole interface (scanlines,
   LCD grid, dot matrix) with opacity and pixelated scaling, exported as a high
   z-index extra image.
+- **Stand-in game art** — three scraped SNES screenshots ride along so the
+  gamelist's art box shows something with the busyness of real artwork instead
+  of an empty frame. Switch between them on the Gamelist panel or load your own.
+  They are a preview aid only: never written into the `theme.xml`, never packed
+  into the exported zip.
 - **System logos and game art** — switch the carousel from names to per-system
   logo images (`system/<id>.png`) with a logo box you can size, and place
   scraped game art beside the gamelist as the detailed view does. Load a sample
@@ -174,5 +179,7 @@ metrics and can land a pixel out; check on the device before calling it final.
 
 ## Licence
 
-The tool is MIT licensed. **BPreplay** is bundled for the preview and remains
+The tool is MIT licensed. The three stand-in game images are downscaled
+screenshots of SNES titles, included as preview aids; they remain the property
+of their respective publishers and are not covered by the MIT grant. **BPreplay** is bundled for the preview and remains
 under its own licence — it is not part of the MIT grant.
