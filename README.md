@@ -41,8 +41,13 @@ so you can walk a theme instead of inspecting it screen by screen.
   engine stretches and multiplies by your colour. Load real background art for a
   page and its own file is used instead, tinted the same way — so a theme can
   start as three hex values and grow into artwork one page at a time.
-- **Colour and opacity per layer** — every colour has an opacity slider, because
-  the engine expresses opacity as the alpha byte of the colour.
+- **Colour and opacity per layer** — every colour has a swatch, a hex field and
+  an opacity slider, because the engine expresses opacity as the alpha byte of
+  the colour. The field takes `abc`, `RRGGBB` or the eight-digit `RRGGBBAA` a
+  `theme.xml` is written in — paste one straight out of a theme file and the
+  alpha byte lands on the opacity slider. It reads back in the same eight-digit
+  form whenever the colour is not fully opaque, so what you see is what the file
+  will say.
 - **Gradient selections** — a second colour fades top-to-bottom across the
   carousel, gamelist and menu pills (`selectorColorEnd`).
 - **Typography per layer** — eleven independent font slots (clock, battery,

@@ -2769,13 +2769,29 @@
     if (fd.t === "color") {
       wrap.appendChild(el("label", null, fd.label));
       var row = el("div"); row.className = "row";
+      // the field shows what the theme file will say: eight digits once the
+      // colour is not fully opaque, because that is how the engine reads alpha
+      function shown() {
+        var a = S[fd.k + "A"];
+        if (a == null || a >= 100) return S[fd.k];
+        var h = Math.round(a * 255 / 100).toString(16).toUpperCase();
+        return S[fd.k] + (h.length < 2 ? "0" + h : h);
+      }
       var sw = el("input"); sw.type = "color"; sw.value = S[fd.k];
-      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.value = S[fd.k];
-      sw.addEventListener("input", function () { S[fd.k] = sw.value.toUpperCase(); tx.value = S[fd.k]; render(); });
+      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.value = shown();
+      tx.title = "Paste a colour as RGB, RRGGBB or RRGGBBAA - the alpha byte sets the opacity below.";
+      sw.addEventListener("input", function () { S[fd.k] = sw.value.toUpperCase(); tx.value = shown(); render(); });
       tx.addEventListener("change", function () {
-        var v = tx.value.trim(); if (v[0] !== "#") v = "#" + v;
-        if (/^#[0-9a-fA-F]{6}$/.test(v)) { S[fd.k] = v.toUpperCase(); sw.value = S[fd.k]; render(); }
-        else { tx.value = S[fd.k]; }
+        var v = tx.value.trim().replace(/^#/, "");
+        // three-digit shorthand, the usual six, or the eight a theme.xml carries
+        if (/^[0-9a-fA-F]{3}$/.test(v)) v = v[0] + v[0] + v[1] + v[1] + v[2] + v[2];
+        var m = /^([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec(v);
+        if (!m) { tx.value = shown(); return; }
+        S[fd.k] = "#" + m[1].toUpperCase();
+        if (m[2] && S[fd.k + "A"] != null) S[fd.k + "A"] = Math.round(parseInt(m[2], 16) / 255 * 100);
+        sw.value = S[fd.k];
+        buildRail();   // the opacity slider beside it has to catch up
+        render();
       });
       row.appendChild(sw); row.appendChild(tx); wrap.appendChild(row);
       if (S[fd.k + "A"] != null) {
@@ -2785,7 +2801,9 @@
         var ar = el("input"); ar.type = "range"; ar.min = 0; ar.max = 100; ar.step = 1;
         ar.value = S[fd.k + "A"]; ar.style.flex = "1";
         ar.addEventListener("input", function () {
-          S[fd.k + "A"] = parseFloat(ar.value); aval.textContent = S[fd.k + "A"] + "%"; render();
+          S[fd.k + "A"] = parseFloat(ar.value); aval.textContent = S[fd.k + "A"] + "%";
+          tx.value = shown();
+          render();
         });
         arow.appendChild(alab); arow.appendChild(ar); arow.appendChild(aval);
         wrap.appendChild(arow);
