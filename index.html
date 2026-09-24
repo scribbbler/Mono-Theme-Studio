@@ -588,6 +588,21 @@
     .devicerow { display: block; flex: 0 0 auto; width: auto; }
     .devicewrap { display: block; flex: 0 0 auto; width: auto; overflow: visible; }
     .zoom { display: none; }
+  }
+
+  /* Under Base's medium breakpoint the console is shown whole, so the stage
+     goes back to being a column with the device centred in what is left. */
+  @media (max-width: 599.98px) {
+    .stage {
+      padding: 8px 8px calc(var(--peek) + 8px);
+      min-height: 0; overflow: hidden; justify-content: flex-start;
+    }
+    .devicerow { display: flex; flex: 1 1 0; min-height: 0; width: 100%; }
+    .devicewrap {
+      display: flex; flex: 1 1 0; min-width: 0; min-height: 0;
+      align-items: center; justify-content: center; overflow: hidden;
+    }
+    main { height: calc(100dvh - var(--peek)); }
     .legend { font-size: 11px; }
 
     /* controls ride up from the bottom */
@@ -3170,12 +3185,15 @@
     fitScreen();
   }
   function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
+  // Base's medium breakpoint: below it the device is shown whole rather than
+  // used as a backdrop cropped to its screen
+  function isNarrow() { return window.matchMedia("(max-width: 599.98px)").matches; }
 
   // On a phone the device is the backdrop and the controls ride over it, so
   // the console is sized against what the sheet leaves visible.
   function fitScreen() {
     var box = document.getElementById("console");
-    var mob = isMobile();
+    var mob = isMobile() && !isNarrow();
     var z;
     if (mob) {
       // Phone: the 640x480 screen is what matters, so fit that to the width
@@ -3187,6 +3205,16 @@
       box.style.transform = "translate(" + (-90 * z) + "px," + (-90 * z) + "px) scale(" + z + ")";
       box.style.marginRight = (SW * z - CW) + "px";
       box.style.marginBottom = (SH * z + 150 - CH) + "px";
+    } else if (isNarrow()) {
+      // under 600px the whole device is shown, fitted to what is left once
+      // the bar, the tabs and the sheet's peek have taken their share
+      var wrap = document.getElementById("devicewrap");
+      var aw = (wrap && wrap.clientWidth ? wrap.clientWidth : window.innerWidth) - 8;
+      var ah = (wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight * 0.6) - 8;
+      z = Math.max(.15, Math.min(aw / CW, ah / CH));
+      box.style.transform = "scale(" + z + ")";
+      box.style.marginRight = Math.round(CW * (z - 1)) + "px";
+      box.style.marginBottom = Math.round(CH * (z - 1)) + "px";
     } else {
       // the device renders at the level you picked; the wrapper scrolls if
       // that is bigger than the room available
