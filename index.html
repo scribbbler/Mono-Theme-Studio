@@ -529,6 +529,9 @@
     artSample: 0,
     carLogos: false, carLogoW: 320, carLogoH: 72,
     carType: "vertical", carPosX: 0, carPosY: 0, carSizeW: 640, carSizeH: 480,
+    carBand: "#000000", carBandA: 0, carLogoAlign: "left", glAlign: "left",
+    menuRow: "#F7FBF7", menuRowA: 100, menuSel: "#000000", menuSelA: 100,
+    menuPill: "#F7FBF7", menuPillA: 100, menuOwn: false,
     glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
     helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100,
@@ -1163,6 +1166,11 @@
     setNum("carRadius", crad != null ? crad * SH : 0);
     px(r.num("system", "carousel", null, "selectorWidth"), "x", "carPillW");
     px(r.num("system", "carousel", null, "selectorPadding"), "y", "carPad");
+    // the carousel fills its own rect with <color> before anything is drawn in it
+    var band = r.colour("system", "carousel", null, "color");
+    if (band) { S.carBand = band.hex; S.carBandA = band.a; } else S.carBandA = 0;
+    var la = (r.prop("system", "carousel", null, "logoAlignment") || "").trim().toLowerCase();
+    S.carLogoAlign = (la === "center" || la === "right") ? la : "left";
     var cType = (r.prop("system", "carousel", null, "type") || "").trim().toLowerCase();
     S.carType = /horizontal/.test(cType) ? "horizontal" : "vertical";
     var cPos = r.pair("system", "carousel", null, "pos");
@@ -1209,6 +1217,11 @@
     var grad = r.num("basic", "textlist", "gamelist", "selectorRadius");
     setNum("glRadius", grad != null ? grad * SH : 0);   // stock draws a square bar
     px(r.num("basic", "textlist", "gamelist", "horizontalMargin"), "x", "glInset");
+    var ga = (r.prop("basic", "textlist", "gamelist", "alignment") || "").trim().toLowerCase();
+    S.glAlign = (ga === "center" || ga === "right") ? ga : "left";
+    // the selected row's own colour, rather than assuming it matches the pill's
+    var gsel = r.colour("basic", "textlist", "gamelist", "selectedColor");
+    if (gsel) { S.pillText = gsel.hex; S.pillTextA = gsel.a; }
     var ls = r.num("basic", "textlist", "gamelist", "lineSpacing");
     if (ls) setNum("glPitch", ls * glyphBox(S.glFont, S.fGl));
     S.glFit = (r.prop("basic", "textlist", "gamelist", "selectorFitContent") || "") === "true";
@@ -1266,6 +1279,13 @@
     });
 
     // ---- menu / keyboard / screensaver ----
+    var mRow = r.colour("menu", "menuText", "menutext", "color");
+    var mSel = r.colour("menu", "menuText", "menutext", "selectedColor");
+    var mPill = r.colour("menu", "menuText", "menutext", "selectorColor");
+    S.menuOwn = !!(mRow || mSel || mPill);
+    S.menuRow = mRow ? mRow.hex : S.text;      S.menuRowA = mRow ? mRow.a : alphaOf("text");
+    S.menuSel = mSel ? mSel.hex : S.pillText;  S.menuSelA = mSel ? mSel.a : alphaOf("pillText");
+    S.menuPill = mPill ? mPill.hex : S.pill;   S.menuPillA = mPill ? mPill.a : alphaOf("pill");
     var mf = r.num("menu", "menuText", "menutext", "fontSize");
     if (mf) setNum("menuFont", mf * SH * BOOST);
     useFont(r.prop("menu", "menuText", "menutext", "fontPath"), "fMenu");
@@ -1811,6 +1831,14 @@
 
   function drawCarousel(scr) {
     if (S.carType === "horizontal") return drawCarouselH(scr);
+    if (S.carBandA > 0) {
+      scr.appendChild(el("div", {
+        left: S.carPosX + "px", top: S.carPosY + "px",
+        width: S.carSizeW + "px", height: S.carSizeH + "px",
+        background: css("carBand")
+      }));
+    }
+
     // declared up here because the list-scroll branch below counts the entries
     var names = sysList();
     var pitch = S.carHeight / S.carRows;
@@ -1854,12 +1882,13 @@
         var lg = tinted({
           left: S.carIndent + "px", top: y + "px",
           width: S.carLogoW + "px", height: S.carLogoH + "px",
-          webkitMaskPosition: "left center"
         }, perSys || ART.sysLogo.src,
            S.logoTint ? (isSel ? css("pillText") : css("text")) : css("logoArt"));
         lg.style.opacity = fade * (S.logoArtA / 100);
         if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = "left center"; }
-        lg.style.backgroundPosition = "left center";
+        var bp = S.carLogoAlign === "center" ? "center" : S.carLogoAlign === "right" ? "right center" : "left center";
+        lg.style.backgroundPosition = bp;
+        lg.style.webkitMaskPosition = lg.style.maskPosition = bp;
         scr.appendChild(grab(lg, { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       } else {
         scr.appendChild(grab(el("div", {
@@ -1876,6 +1905,13 @@
   // by logoSpacing = (width - logoWidth * maxLogoCount) / maxLogoCount +
   // logoWidth (SystemView.cpp:1104).
   function drawCarouselH(scr) {
+    if (S.carBandA > 0) {
+      scr.appendChild(el("div", {
+        left: S.carPosX + "px", top: S.carPosY + "px",
+        width: S.carSizeW + "px", height: S.carSizeH + "px",
+        background: css("carBand")
+      }));
+    }
     var names = sysList();
     var n = names.length;
     var lw = S.carLogoW, lh = S.carLogoH;
@@ -1967,12 +2003,19 @@
       }
       scr.appendChild(grab(el("div", {
         left: (S.glLeft + S.glInset) + "px", top: y + "px", height: S.glPillH + "px",
-        width: (glListWidth() - S.glInset) + "px", display: "flex", alignItems: "center",
+        width: (glListWidth() - S.glInset * 2) + "px", display: "flex", alignItems: "center",
+        justifyContent: S.glAlign === "center" ? "center" : S.glAlign === "right" ? "flex-end" : "flex-start",
         font: fontCss(S.glFont, S.fGl),
         color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap", overflow: "hidden"
       }, upper(name, S.uGl)), { x: { k: "glLeft" }, y: { k: "glTop" } }, "Game list"));
     }
   }
+
+  function menuInk(sel) {
+    if (!S.menuOwn) return sel ? css("pillText") : css("text");
+    return sel ? css("menuSel") : css("menuRow");
+  }
+  function menuPillBg() { return S.menuOwn ? css("menuPill") : pillBg(); }
 
   function drawMenu(scr) {
     var pitch = 38, rowH = 36, top = 47;
@@ -1981,22 +2024,22 @@
       if (i === menuCursor) {
         scr.appendChild(el("div", {
           left: "10px", top: y + "px", width: "620px", height: rowH + "px",
-          background: pillBg(), borderRadius: "18px"
+          background: menuPillBg(), borderRadius: "18px"
         }));
       }
       scr.appendChild(el("div", {
         left: "22px", top: y + "px", height: rowH + "px", width: "580px",
         display: "flex", alignItems: "center",
-        font: fontCss(S.menuFont, S.fMenu), color: i === menuCursor ? css("pillText") : css("text"),
+        font: fontCss(S.menuFont, S.fMenu), color: menuInk(i === menuCursor),
         whiteSpace: "nowrap"
       }, MENU_ROWS[i].toUpperCase()));
       if (ART.arrow) {
         scr.appendChild(tinted({ left: "598px", top: (y + (rowH - 24) / 2) + "px", width: "24px", height: "24px" },
-          ART.arrow.src, i === menuCursor ? css("pillText") : css("text")));
+          ART.arrow.src, menuInk(i === menuCursor)));
       } else {
         scr.appendChild(el("div", {
           left: "600px", top: y + "px", height: rowH + "px", display: "flex", alignItems: "center",
-          font: fontCss(22, S.fMenu), color: i === menuCursor ? css("pillText") : css("text")
+          font: fontCss(22, S.fMenu), color: menuInk(i === menuCursor)
         }, "›"));
       }
     }
@@ -2661,6 +2704,11 @@
     x.push('\t<path>' + PATHS.arrow + '</path><optionPath>' + PATHS.arrow + '</optionPath>');
     x.push('    </menuArrow>');
     x.push('    <menuText name="menutext">');
+    if (S.menuOwn) {
+      x.push('\t<color>' + hex8("menuRow") + '</color>');
+      x.push('\t<selectedColor>' + hex8("menuSel") + '</selectedColor>');
+      x.push('\t<selectorColor>' + hex8("menuPill") + '</selectorColor>');
+    }
     x.push('\t<fontPath>./fonts/' + S.fMenu + '</fontPath>');
     x.push('\t<fontSize>' + fontFrac(S.menuFont) + '</fontSize><!-- ' + S.menuFont + 'px -->');
     x.push('\t<color>' + hex8("text") + '</color>');
@@ -2927,6 +2975,12 @@
       { t: "note", label: "Game art is each game's scraped image, so the theme sets only where it goes — the file here is a stand-in and is never written into the theme or the zip. The box below is exported as a centred anchor plus the sizing property, so art of any shape stays inside it." }
     ]) }],
     menu: [{ name: "Menu", open: true, fields: [
+      { t: "sub", label: "Colours" },
+      { k: "menuOwn", t: "bool", label: "Own menu colours",
+        hint: "Off, the menu borrows the carousel's. On, it carries its own, as menuText allows." },
+      { k: "menuRow", t: "color", label: "Row text" },
+      { k: "menuSel", t: "color", label: "Selected text" },
+      { k: "menuPill", t: "color", label: "Selection pill" },
       { t: "sub", label: "Rows" },
       { k: "menuFont", t: "num", label: "Size", min: 14, max: 32, step: 1, unit: "px" },
       { k: "fMenu", t: "font", label: "Row font" },
