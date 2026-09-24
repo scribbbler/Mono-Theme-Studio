@@ -70,8 +70,10 @@
   }
 
   * { box-sizing: border-box; }
+  html { height: 100%; }
   body {
-    margin: 0;
+    margin: 0; height: 100dvh; overflow: hidden;
+    display: flex; flex-direction: column;
     background: var(--ground);
     color: var(--content);
     font-family: var(--sans);
@@ -89,7 +91,7 @@
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     padding: var(--s500) max(var(--s700), calc((100% - 1300px) / 2));
     background: var(--bg); border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 20;
+    flex: 0 0 auto; z-index: 20;
   }
   .brand { display: flex; flex-direction: column; gap: 2px; }
   .brand h1 { font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
@@ -120,13 +122,17 @@
 
   main {
     display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0;
-    align-items: start; min-height: calc(100dvh - 57px);
-    width: 100%; max-width: 1300px; margin: 0 auto;
+    align-items: stretch; flex: 1 1 auto; min-height: 0; overflow: hidden;
+    width: 100%; margin: 0;
+    padding: 0 max(var(--s700), calc((100% - 1300px) / 2));
   }
   /* ---------- control rail ---------- */
+  /* main is centred on the same gutter the header pads with, so no left
+     margin here puts the cards under the title rather than beside it */
   .rail {
-    margin: var(--s700) 0 var(--s700) var(--s700);
-    align-self: start;
+    margin: var(--s700) var(--s700) var(--s700) 0;
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
   /* Accordion - each group is a card on the rail's ground, headed by a 44px
      row that carries a plus when it is shut and a minus when it is open. */
@@ -292,7 +298,44 @@
   .grabbable:active { cursor: grabbing; }
   .grabbable:hover { outline: 1px dashed rgba(148,163,184,.85); outline-offset: 2px; }
   .grabbable.corner:hover { outline-offset: 0; }
-  .stage { padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .stage {
+    padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;
+    align-items: center; min-height: 0; overflow: hidden;
+  }
+  .stage > .tabs, .stage > .engine, .stage > .legend, .stage > .export { flex: 0 0 auto; }
+  .devicerow {
+    flex: 1 1 0; min-height: 0; width: 100%;
+    display: flex; align-items: stretch; gap: var(--s500);
+  }
+  .devicewrap {
+    flex: 1 1 0; min-width: 0; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: auto; overscroll-behavior: contain;
+  }
+  /* beside the device box, so scrolling that box never moves the control */
+  .zoom {
+    flex: 0 0 auto; align-self: center;
+    display: flex; flex-direction: column; align-items: center; gap: var(--s300);
+  }
+  .zoom .zbtn {
+    width: 32px; height: 32px; padding: 0; cursor: pointer;
+    background: var(--bg-3); border: 2px solid transparent; border-radius: var(--r-input);
+    display: grid; place-content: center;
+  }
+  .zoom .zbtn:hover { border-color: var(--border); }
+  .zoom .zbtn:disabled { opacity: .4; cursor: default; }
+  .zoom .zbtn::before {
+    content: ""; display: block; width: 12px; height: 12px;
+    background:
+      linear-gradient(var(--content), var(--content)) center / 12px 2px no-repeat,
+      linear-gradient(var(--content), var(--content)) center / 2px 12px no-repeat;
+  }
+  .zoom .zbtn.minus::before {
+    background: linear-gradient(var(--content), var(--content)) center / 12px 2px no-repeat;
+  }
+  .zoom .zval {
+    font-size: 11px; color: var(--content-2); font-variant-numeric: tabular-nums;
+  }
   .tabs { display: flex; gap: 0; flex-wrap: wrap; justify-content: center; border-bottom: 1px solid var(--border); width: 100%; }
   .engine { display: flex; justify-content: center; }
   .engine .seg { display: inline-flex; }
@@ -350,15 +393,25 @@
   .export h2 { font-size: 16px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--content); }
   .export .actions { margin-left: auto; display: flex; gap: 6px; }
   pre.xml {
-    margin: 0; max-height: 340px; overflow: auto; background: var(--bg-2);
+    margin: 0; max-height: 200px; overflow: auto; background: var(--bg-2);
     border: 0; border-radius: var(--r-surface); padding: var(--s600);
     font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--content);
     white-space: pre; tab-size: 2;
   }
   .note {
-    font-size: 12px; line-height: 16px; color: var(--content-3); max-width: 66ch;
+    font-size: 12px; line-height: 16px; color: var(--content-2); max-width: 66ch;
     border-left: 2px solid var(--border); padding-left: var(--s500);
   }
+  .sheetbox {
+    width: min(620px, calc(100vw - 32px)); padding: var(--s700);
+    background: var(--bg); color: var(--content);
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  .sheetbox::backdrop { background: var(--overlay); }
+  .sheetbox .head { display: flex; align-items: center; gap: var(--s500); margin-bottom: var(--s600); }
+  .sheetbox h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .sheetbox .head .btn { margin-left: auto; }
+  .sheetbox .note { border-left: 0; padding-left: 0; max-width: none; font-size: 13px; line-height: 19px; }
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px);
     background: var(--content); color: var(--content-inverse); padding: var(--s500) var(--s600);
@@ -371,7 +424,7 @@
 
   @media (max-width: 900px) {
     /* minmax(0,...) stops the track growing to the console's unscaled width */
-    main { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    main { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 0; }
     .stage { min-width: 0; overflow-x: hidden; }
     .tabs {
       flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start;
@@ -383,9 +436,12 @@
     /* the device becomes the backdrop */
     .stage {
       padding: 12px 12px calc(var(--peek) + 12px);
-      min-height: calc(100dvh - 57px);
-      justify-content: flex-start;
+      min-height: 0;
+      justify-content: flex-start; overflow-y: auto;
     }
+    .devicerow { display: block; flex: 0 0 auto; width: auto; }
+    .devicewrap { display: block; flex: 0 0 auto; width: auto; overflow: visible; }
+    .zoom { display: none; }
     /* the readout would sit on top of the clipped shell, so lift it above */
     .legend { font-size: 11px; order: -1; opacity: .9; }
 
@@ -441,6 +497,8 @@
   <section class="stage">
     <div class="tabs" id="tabs"></div>
     <div class="engine" id="engine"></div>
+    <div class="devicerow">
+    <div class="devicewrap" id="devicewrap">
     <div class="console" id="console">
       <div class="shell" aria-hidden="true">
         <div class="body"></div>
@@ -457,6 +515,13 @@
       </div>
       <div class="screen" id="screen"></div>
     </div>
+    </div>
+    <div class="zoom" id="zoom">
+      <button class="zbtn" id="zoomin" type="button" aria-label="Zoom in"></button>
+      <span class="zval" id="zoomval">100%</span>
+      <button class="zbtn minus" id="zoomout" type="button" aria-label="Zoom out"></button>
+    </div>
+    </div>
     <div class="legend" id="legend"></div>
 
     <div class="export">
@@ -465,11 +530,22 @@
         <div class="actions">
           <button class="btn" id="copy">Copy</button>
           <button class="btn" id="download">theme.xml</button>
+          <button class="btn" id="about">How this works</button>
           <button class="btn primary" id="zip">Download .zip</button>
         </div>
       </div>
       <pre class="xml" id="xml"></pre>
-      <p class="note">
+
+    </div>
+  </section>
+</main>
+
+<dialog class="sheetbox" id="aboutbox">
+  <div class="head">
+    <h2>How this works</h2>
+    <button class="btn" id="aboutclose" aria-label="Close">Close</button>
+  </div>
+  <div class="note">
         <b>Download .zip</b> gives you a complete theme folder — this
         <code>theme.xml</code> plus every font and image in use. Unzip it into
         <code>/roms/themes/</code> and pick it in <i>UI Settings → Theme</i>.
@@ -481,10 +557,8 @@
         Sizes are the pixels you see on a 640×480 panel; the file stores screen
         fractions, with font sizes divided by the engine's 1.31 boost. Menu row
         spacing and the hint labels come from the build, not the theme.
-      </p>
-    </div>
-  </section>
-</main>
+      </div>
+</dialog>
 
 <div class="toast" id="toast"></div>
 
@@ -2743,9 +2817,38 @@
     fitScreen();
     renderLegend();
     renderXML();
+    if (zoomAuto) fitScreen();
   }
 
   var CW = 730, CH = 1056;   // device box, from the Figma frame
+  var ZOOMS = [0.5, 0.75, 1];
+  var zoom = null;           // null until the first fit picks a level
+  var zoomAuto = true;       // until you use the control, it tracks the space
+
+  // the largest level that still fits the space the stage leaves for it
+  function bestZoom() {
+    var wrap = document.getElementById("devicewrap");
+    var w = wrap && wrap.clientWidth ? wrap.clientWidth : window.innerWidth - 460;
+    var h = wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight - 190;
+    for (var i = ZOOMS.length - 1; i >= 0; i--) {
+      if (CW * ZOOMS[i] <= w && CH * ZOOMS[i] <= h) return ZOOMS[i];
+    }
+    return ZOOMS[0];
+  }
+  function paintZoom() {
+    var v = document.getElementById("zoomval");
+    if (v) v.textContent = Math.round(zoom * 100) + "%";
+    var i = ZOOMS.indexOf(zoom);
+    var up = document.getElementById("zoomin"), dn = document.getElementById("zoomout");
+    if (up) up.disabled = i >= ZOOMS.length - 1;
+    if (dn) dn.disabled = i <= 0;
+  }
+  function stepZoom(d) {
+    var i = ZOOMS.indexOf(zoom == null ? bestZoom() : zoom);
+    zoom = ZOOMS[Math.min(Math.max(i + d, 0), ZOOMS.length - 1)];
+    zoomAuto = false;
+    fitScreen();
+  }
   function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
 
   // On a phone the device is the backdrop and the controls ride over it, so
@@ -2765,9 +2868,11 @@
       box.style.marginRight = (SW * z - CW) + "px";
       box.style.marginBottom = (SH * z + 150 - CH) + "px";
     } else {
-      var railW = document.getElementById("rail").offsetWidth || 0;
-      var avail = Math.max(240, window.innerWidth - railW - 48);
-      z = Math.min(1, Math.max(.3, Math.min(avail / CW, (window.innerHeight - 190) / CH)));
+      // the device renders at the level you picked; the wrapper scrolls if
+      // that is bigger than the room available
+      if (zoomAuto || zoom == null) zoom = bestZoom();
+      z = zoom;
+      paintZoom();
       box.style.transform = "scale(" + z + ")";
       box.style.marginRight = Math.round(CW * (z - 1)) + "px";
       box.style.marginBottom = Math.round(CH * (z - 1)) + "px";
@@ -3882,6 +3987,9 @@
     fl.appendChild(fi);
 
     box.appendChild(zl); box.appendChild(fl);
+    // moved, not rebuilt, so the handler bound to it stays bound
+    var zip = document.getElementById("zip");
+    if (zip) box.appendChild(zip);
   }
 
   function downloadZip() {
@@ -3952,6 +4060,17 @@
   var exportEl = document.querySelector(".export");
   var stageEl = document.querySelector(".stage");
   var railBody = document.getElementById("railbody");
+  var aboutBox = document.getElementById("aboutbox");
+  document.getElementById("about").addEventListener("click", function () {
+    if (aboutBox.showModal) aboutBox.showModal(); else aboutBox.setAttribute("open", "");
+  });
+  document.getElementById("aboutclose").addEventListener("click", function () {
+    if (aboutBox.close) aboutBox.close(); else aboutBox.removeAttribute("open");
+  });
+
+  document.getElementById("zoomin").addEventListener("click", function () { stepZoom(1); });
+  document.getElementById("zoomout").addEventListener("click", function () { stepZoom(-1); });
+
   function placeExport() {
     var target = isMobile() ? railBody : stageEl;
     if (exportEl.parentElement !== target) target.appendChild(exportEl);
