@@ -1986,34 +1986,54 @@
     }, "EmulationStation V2.13.0.0 · Build 20260923"));
   }
 
+  // The engine fixes this screen's geometry (SystemScreenSaver.cpp:1079):
+  // lock centre at 0.0458H, DATE centre at 0.37H, time centre at 0.517H, and
+  // the date is drawn at 0.36x the clock's size. The date sits ABOVE the time.
+  var LOCK_SVG = svgIcon('<rect x="4" y="10.5" width="16" height="11" rx="2" fill="#fff"/>' +
+    '<path d="M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3" fill="none" stroke="#fff" stroke-width="2"/>');
+
   function drawSaver(scr) {
     var cx = SW / 2;
-    if (S.ssLock && ART.ssLockIcon) {
-      scr.appendChild(tinted({ left: (cx - 16) + "px", top: "96px", width: "32px", height: "32px" },
-        ART.ssLockIcon.src, css("text")));
-    } else if (S.ssLock) {
-      scr.appendChild(el("div", {
-        left: "0px", top: "96px", width: SW + "px", textAlign: "center",
-        font: fontCss(26, S.fSaver), color: css("text"), opacity: ".75"
-      }, "🔒"));
-    }
-    scr.appendChild(el("div", {
-      left: "0px", top: (SH / 2 - S.ssClock * 0.72) + "px", width: SW + "px", textAlign: "center",
-      font: fontCss(S.ssClock, S.fSaver), color: css("text"), letterSpacing: "0"
-    }, "04:20"));
-    var sub = S.ssCharge ? "82% Charged" : "Tuesday, 23 September";
+    var lockSz = SH * 0.05, lockY = SH * 0.0458;
+    var dateY = SH * 0.37, timeY = SH * 0.517;
     var subSize = Math.round(S.ssClock * 0.36);
-    var row = el("div", {
-      left: "0px", top: (SH / 2 + S.ssClock * 0.34) + "px", width: SW + "px",
-      display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-      font: fontCss(subSize, S.fSaver), color: css("text")
-    });
-    if (S.ssCharge && ART.ssBattIcon) {
-      row.appendChild(tinted({ position: "relative", width: subSize + "px", height: subSize + "px" },
-        ART.ssBattIcon.src, css("text")));
+
+    if (S.ssLock) {
+      scr.appendChild(tinted({
+        left: (cx - lockSz / 2) + "px", top: (lockY - lockSz / 2) + "px",
+        width: lockSz + "px", height: lockSz + "px"
+      }, ART.ssLockIcon ? ART.ssLockIcon.src : LOCK_SVG, css("text")));
     }
-    row.appendChild(el("span", { position: "relative" }, sub));
+
+    // the date row, or the charging line that replaces it on the same row
+    var row = el("div", {
+      left: "0px", top: (dateY - subSize * 0.75) + "px", width: SW + "px",
+      height: (subSize * 1.5) + "px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      gap: (SH * 0.021) + "px",
+      font: fontCss(subSize, S.fSaver), color: css("text"),
+      textShadow: "0 0 2px rgba(0,0,0,.38)"
+    });
+    if (S.ssCharge) {
+      var iconW = SH * 0.10;
+      row.appendChild(ART.ssBattIcon
+        ? tinted({ position: "relative", width: iconW + "px", height: subSize + "px" },
+            ART.ssBattIcon.src, css("text"))
+        : el("div", { position: "relative", width: iconW + "px", height: subSize + "px",
+            border: "2px solid " + css("text"), borderRadius: "3px" }));
+    }
+    // "Wed, 31 Jan" - abbreviated weekday and month, as formatClockDate builds it
+    row.appendChild(el("span", { position: "relative" }, S.ssCharge ? "82% Charged" : "Tue, 23 Sep"));
     scr.appendChild(row);
+
+    // the time, below the date
+    scr.appendChild(el("div", {
+      left: "0px", top: (timeY - S.ssClock * 0.75) + "px", width: SW + "px",
+      height: (S.ssClock * 1.5) + "px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      font: fontCss(S.ssClock, S.fSaver), color: css("text"),
+      textShadow: "0 0 4px rgba(0,0,0,.5)"
+    }, "04:20 AM"));
   }
 
   function drawPopup(scr) {
