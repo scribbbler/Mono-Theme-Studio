@@ -29,10 +29,8 @@ row, because on the device they are one value.
 
 The device around the screen is the Figma source rather than a sketch of it:
 its 730×1056 body, the bezel inset 9px, and the d-pad, action cluster, menu
-button, Select and Start bars and the speaker grille as the file's own vectors
-and geometry, inlined so the page stays self-contained. It is checked against a
-render of that file pixel by pixel, so the mock-up is the wireframe rather than
-an impression of it.
+button, Select and Start bars and the speaker grille as the file's own vectors,
+inlined so the page stays self-contained.
 
 The systems and games it previews with are real: the carousel lists the fifteen
 platforms of the [Tiny Best Set GO!](https://lewdev.github.io/apps/tiny-best-set-list/)
