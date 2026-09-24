@@ -145,65 +145,71 @@
     transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s ease;
   }
   details.group[open] > summary::after { transform: rotate(225deg) translate(-3px, -3px); }
-  .fields { padding: 2px 18px 16px; display: flex; flex-direction: column; gap: 11px; }
+  /* An inspector, not a form: properties sit two to a row, clustered under the
+     thing they affect, with the value editable in place. */
+  .fields {
+    padding: var(--s300) var(--s650) var(--s600);
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s300) var(--s300);
+    align-items: start;
+  }
+  .subhead {
+    grid-column: 1 / -1; margin: var(--s400) 0 0;
+    font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--content-3);
+  }
+  .fields > .subhead:first-child { margin-top: 0; }
 
-  .field { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+  /* a compact property: short label, value you can type or scrub */
+  .prop { display: flex; align-items: center; gap: var(--s200); min-width: 0; }
+  .prop > label {
+    flex: 0 0 auto; font-size: 12px; color: var(--content-3);
+    cursor: ew-resize; user-select: none; touch-action: none;
+    padding: 2px 0; white-space: nowrap;
+  }
+  .prop > label:hover { color: var(--content); }
+  .prop input.num {
+    flex: 1 1 0; min-width: 0; width: 100%; height: 30px; padding: 0 var(--s300);
+    background: var(--bg-2); color: var(--content); border: 2px solid transparent;
+    border-radius: var(--r-mini); font-size: 13px;
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .prop input.num:hover { background: var(--bg-3); }
+  .prop input.num:focus { outline: none; border-color: var(--border-selected); background: var(--bg-2); }
+
+  .field { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+  .field > .seg { justify-self: end; }
+  /* a choice with long labels drops under its own label rather than squeezing */
+  .field.choice-wide { grid-template-columns: 1fr; }
+  .field.choice-wide > .seg { justify-self: stretch; display: flex; }
+  .field.choice-wide .seg button { flex: 1 1 0; }
+  .field.half { grid-column: auto; }
   .field > label { font-size: 14px; font-weight: 500; line-height: 16px; color: var(--content); }
-  .field .hint { grid-column: 1 / -1; font-size: 12px; line-height: 16px; color: var(--content-3); margin-top: 0; }
-  .field .row { display: flex; align-items: center; gap: 8px; }
-  /* Slider - a thin tertiary track, filled to the value in the primary
-     content colour, with a round thumb. --fill is set as the value changes. */
-  input[type="range"] {
-    width: 100%; height: 24px; margin: 0; background: none; cursor: pointer;
-    -webkit-appearance: none; appearance: none;
-  }
-  input[type="range"]::-webkit-slider-runnable-track {
-    height: 4px; border-radius: 2px;
-    background: linear-gradient(to right,
-      var(--content) 0 var(--fill, 50%), var(--bg-3) var(--fill, 50%) 100%);
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 20px; height: 20px; margin-top: -8px; border-radius: 50%;
-    background: var(--content); border: 0;
-    box-shadow: 0 0 0 0 var(--overlay); transition: box-shadow .15s ease;
-  }
-  input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 6px color-mix(in srgb, var(--content) 14%, transparent); }
-  input[type="range"]:active::-webkit-slider-thumb { box-shadow: 0 0 0 9px color-mix(in srgb, var(--content) 18%, transparent); }
-  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--bg-3); }
-  input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--content); }
-  input[type="range"]::-moz-range-thumb {
-    width: 20px; height: 20px; border-radius: 50%; background: var(--content); border: 0;
-  }
-  .field.slider { grid-template-columns: 1fr; }
-  .field.slider .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
-  .fields { gap: var(--s600) !important; }
+  .field .hint, .fields > .hint { grid-column: 1 / -1; font-size: 12px; line-height: 16px; color: var(--content-3); margin-top: 0; }
+  .field .row { display: flex; align-items: center; gap: var(--s200); }
   /* Input - filled, borderless until focus, then a 2px selected border */
   input[type="color"] {
-    width: 44px; height: 32px; padding: 2px; cursor: pointer;
+    flex: 0 0 38px; width: 38px; height: 32px; padding: 2px; cursor: pointer;
     background: var(--bg-2); border: 2px solid transparent; border-radius: var(--r-mini);
   }
   input[type="color"]:hover { border-color: var(--border); }
   input[type="text"].hex {
-    width: 96px; height: 32px; font-family: var(--mono); font-size: 13px; text-transform: uppercase;
+    height: 32px; font-family: var(--mono); font-size: 13px; text-transform: uppercase;
     padding: 0 var(--s300); background: var(--bg-2); color: var(--content);
     border: 2px solid transparent; border-radius: var(--r-mini);
     transition: border-color .15s ease, background .15s ease;
   }
   input[type="text"].hex:hover { background: var(--bg-3); }
-  input[type="text"].hex:focus {
-    outline: none; border-color: var(--border-selected); background: var(--bg-2);
+  input[type="text"].hex:focus { outline: none; border-color: var(--border-selected); background: var(--bg-2); }
+
+  .field.colour { grid-template-columns: 1fr; gap: var(--s200); }
+  .field.colour .row { width: 100%; min-width: 0; }
+  .field.colour input[type="text"].hex { flex: 1 1 0; width: auto; min-width: 0; }
+  .field.colour input.alpha {
+    flex: 0 0 46px; min-width: 0; height: 32px; padding: 0 var(--s200); text-align: right;
+    background: var(--bg-2); color: var(--content-3); border: 2px solid transparent;
+    border-radius: var(--r-mini); font-size: 12px; font-variant-numeric: tabular-nums;
   }
-  /* Segmented control - a tertiary track with an inverse selected segment */
-  .seg { display: inline-flex; background: var(--bg-3); border-radius: var(--r-button); padding: 2px; gap: 2px; }
-  .seg button {
-    border: 0; background: none; padding: 0 var(--s500); height: 32px; cursor: pointer;
-    font-size: 14px; font-weight: 500; color: var(--content-3);
-    border-radius: var(--r-mini); transition: background .15s ease, color .15s ease;
-  }
-  .seg button:hover { color: var(--content); }
-  .seg button[aria-pressed="true"] { background: var(--bg); color: var(--content); }
+  .field.colour input.alpha:focus { outline: none; border-color: var(--border-selected); color: var(--content); }
   /* Checkbox - square, as Base sets checkboxBorderRadius to 0 */
   .switch { display: inline-flex; align-items: center; gap: var(--s300); cursor: pointer; }
   .switch input {
@@ -2733,35 +2739,40 @@
     ]},
     { name: "Status bar · Clock", fields: [
       { k: "fClock", t: "font", label: "Font" },
+      { t: "sub", label: "Clock" },
       { k: "clockSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
       { k: "clockAlign", t: "choice", label: "Alignment",
         choices: [["left", "Left"], ["center", "Centre"], ["right", "Right"]] },
       { k: "clockW", t: "num", label: "Box width", min: 40, max: 640, step: 2, unit: "px" },
-      { k: "clockX", t: "num", label: "Left position", min: 0, max: 640, step: 1, unit: "px" },
-      { k: "clockY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" }
+      { k: "clockX", t: "num", label: "X", min: 0, max: 640, step: 1, unit: "px" },
+      { k: "clockY", t: "num", label: "Y", min: 0, max: 460, step: 1, unit: "px" }
     ]},
     { name: "Status bar · Battery", fields: [
       { k: "stockBatteryFont", t: "bool", label: "Use the UI font (stock)", hint: "Stock EmulationStation draws the battery in its own font; choosing one here needs this build." },
       { k: "fBatt", t: "font", label: "Font" },
+      { t: "sub", label: "Battery" },
       { k: "battSize", t: "num", label: "Size", min: 12, max: 36, step: 1, unit: "px" },
       { k: "battAlign", t: "choice", label: "Alignment",
         choices: [["left", "Left"], ["center", "Centre"], ["right", "Right"]],
         hint: "Where the icon and percentage sit inside their box. The engine's own default is left." },
-      { k: "battX", t: "num", label: "Box left edge", min: 0, max: 620, step: 1, unit: "px" },
+      { k: "battX", t: "num", label: "Box left", min: 0, max: 620, step: 1, unit: "px" },
       { k: "battRight", t: "num", label: "Right margin", min: 0, max: 620, step: 1, unit: "px" },
-      { k: "battY", t: "num", label: "Top position", min: 0, max: 460, step: 1, unit: "px" },
-      { k: "battGap", t: "num", label: "Icon to text gap", min: 0, max: 24, step: 1, unit: "px" }
+      { k: "battY", t: "num", label: "Y", min: 0, max: 460, step: 1, unit: "px" },
+      { k: "battGap", t: "num", label: "Icon gap", min: 0, max: 24, step: 1, unit: "px" }
     ].concat(artFields(["battery"])) },
     { name: "Hint bar", fields: [
       { k: "helpShow", t: "bool", label: "Show hint bar", hint: "Turn off if your background art already has one baked in." },
       { k: "stockPrompts", t: "bool", label: "Stock button set", hint: "Stock EmulationStation decides which buttons appear — a theme cannot hide them. This build trims them instead." },
       { t: "note", label: "Stock draws its own button glyphs at a size it derives from the hint font, 8px from the label and 16px apart. A theme may point those slots at its own images, but not resize, respace, relabel or hide them." },
       { k: "helpPillOn", t: "bool", label: "Pill behind the hints", hint: "Stock EmulationStation draws the hints with no pill; the pill is this build's addition." },
-      { k: "helpFont", t: "num", label: "Label size", min: 12, max: 30, step: 1, unit: "px" },
-      { k: "helpIcon", t: "num", label: "Button circle size", min: 16, max: 44, step: 1, unit: "px", customOnly: true,
+      { t: "sub", label: "Labels" },
+      { k: "helpFont", t: "num", label: "Size", min: 12, max: 30, step: 1, unit: "px" },
+      { t: "sub", label: "Buttons" },
+      { k: "helpIcon", t: "num", label: "Circle size", min: 16, max: 44, step: 1, unit: "px", customOnly: true,
         hint: "Stock sizes each icon from the hint font instead (the 'S' height x 1.25) and ignores this." },
-      { k: "helpPadX", t: "num", label: "Pill padding X", min: 0, max: 30, step: 1, unit: "px", customOnly: true },
-      { k: "helpPadY", t: "num", label: "Pill padding Y", min: 0, max: 20, step: 1, unit: "px", customOnly: true },
+      { t: "sub", label: "Pill" },
+      { k: "helpPadX", t: "num", label: "Padding X", min: 0, max: 30, step: 1, unit: "px", customOnly: true },
+      { k: "helpPadY", t: "num", label: "Padding Y", min: 0, max: 20, step: 1, unit: "px", customOnly: true },
       { k: "helpMargin", t: "num", label: "Side margin", min: 0, max: 60, step: 1, unit: "px" },
       { k: "fHelp", t: "font", label: "Label font" },
       { k: "uHelp", t: "bool", label: "Uppercase labels", customOnly: true,
@@ -2774,15 +2785,19 @@
       { k: "listScroll", t: "bool", label: "List-style navigation", hint: "Selection walks the rows and the list scrolls, like a gamelist." },
       { k: "carFit", t: "bool", label: "Pill hugs the name" },
       { k: "carRows", t: "num", label: "Visible rows", min: 1, max: 12, step: 1 },
-      { k: "carTop", t: "num", label: "Region top", min: 0, max: 120, step: 1, unit: "px" },
-      { k: "carHeight", t: "num", label: "Region height", min: 200, max: 440, step: 2, unit: "px" },
+      { t: "sub", label: "Region" },
+      { k: "carTop", t: "num", label: "Top", min: 0, max: 120, step: 1, unit: "px" },
+      { k: "carHeight", t: "num", label: "Height", min: 200, max: 440, step: 2, unit: "px" },
+      { t: "sub", label: "Rows" },
       { k: "carRowH", t: "num", label: "Row height", min: 40, max: 110, step: 1, unit: "px" },
-      { k: "carPillH", t: "num", label: "Pill height", min: 30, max: 110, step: 1, unit: "px" },
-      { k: "carRadius", t: "num", label: "Pill radius", min: 0, max: 55, step: 1, unit: "px" },
-      { k: "carPillW", t: "num", label: "Pill width / max", min: 200, max: 640, step: 2, unit: "px" },
+      { t: "sub", label: "Selection pill" },
+      { k: "carPillH", t: "num", label: "Height", min: 30, max: 110, step: 1, unit: "px" },
+      { k: "carRadius", t: "num", label: "Radius", min: 0, max: 55, step: 1, unit: "px" },
+      { k: "carPillW", t: "num", label: "Width / max", min: 200, max: 640, step: 2, unit: "px" },
       { k: "carPad", t: "num", label: "Hug padding", min: 4, max: 60, step: 1, unit: "px" },
-      { k: "carIndent", t: "num", label: "Text indent", min: 0, max: 320, step: 1, unit: "px" },
-      { k: "carFont", t: "num", label: "Name size", min: 8, max: 80, step: 1, unit: "px" },
+      { t: "sub", label: "Text" },
+      { k: "carIndent", t: "num", label: "Indent", min: 0, max: 320, step: 1, unit: "px" },
+      { k: "carFont", t: "num", label: "Size", min: 8, max: 80, step: 1, unit: "px" },
       { k: "fCar", t: "font", label: "Name font" },
       { k: "uCar", t: "bool", label: "Uppercase names" },
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
@@ -2793,17 +2808,20 @@
         hint: "Stock enlarges the selected entry by this much (its default is 1.2)." },
       { k: "stockFade", t: "bool", label: "Dim unselected rows", hint: "Stock fades entries by distance from the selection, down to 50%. This build keeps every row at full brightness." },
       { k: "logoTint", t: "bool", label: "Tint logos to the row colour", hint: "Off leaves full-colour logos alone, which is what the engine does when the theme sets no logo colours." },
-      { k: "carLogoW", t: "num", label: "Logo box width", min: 20, max: 700, step: 10, unit: "px" },
-      { k: "carLogoH", t: "num", label: "Logo box height", min: 20, max: 520, step: 2, unit: "px" }
+      { t: "sub", label: "Logo box" },
+      { k: "carLogoW", t: "num", label: "Width", min: 20, max: 700, step: 10, unit: "px" },
+      { k: "carLogoH", t: "num", label: "Height", min: 20, max: 520, step: 2, unit: "px" }
     ].concat(artFields(["sysLogo"])).concat([
       { t: "note", label: "Logos live in the theme's system/ folder, one per system id (snes.png, gb.png…). They are fitted inside the logo box keeping their aspect, the engine tints them with the row colours, and the left indent is the logo box width ÷ 10." }
     ]) }],
     gamelist: [{ name: "Gamelist", open: true, fields: [
       { k: "glFit", t: "bool", label: "Pill hugs the name" },
-      { k: "glTop", t: "num", label: "List top", min: 44, max: 140, step: 1, unit: "px" },
-      { k: "glLeft", t: "num", label: "List left", min: 0, max: 60, step: 1, unit: "px" },
-      { k: "glWidth", t: "num", label: "List width / max pill", min: 300, max: 640, step: 2, unit: "px" },
-      { k: "glFont", t: "num", label: "Game name size", min: 8, max: 64, step: 1, unit: "px" },
+      { t: "sub", label: "List" },
+      { k: "glTop", t: "num", label: "Top", min: 44, max: 140, step: 1, unit: "px" },
+      { k: "glLeft", t: "num", label: "Left", min: 0, max: 60, step: 1, unit: "px" },
+      { k: "glWidth", t: "num", label: "Width", min: 300, max: 640, step: 2, unit: "px" },
+      { t: "sub", label: "Text" },
+      { k: "glFont", t: "num", label: "Size", min: 8, max: 64, step: 1, unit: "px" },
       { k: "glPitch", t: "num", label: "Row pitch", min: 24, max: 80, step: 1, unit: "px" },
       { k: "glPillH", t: "num", label: "Pill height", min: 20, max: 76, step: 1, unit: "px" },
       { k: "glRadius", t: "num", label: "Pill radius", min: 0, max: 38, step: 1, unit: "px" },
@@ -2814,10 +2832,11 @@
       { k: "fGlHead", t: "font", label: "System title font" },
       { k: "uGlHead", t: "bool", label: "Uppercase system title" },
       { k: "glArt", t: "bool", label: "Show game art", hint: "The detailed view puts scraped art beside the list — narrow the list width to make room." },
-      { k: "artX", t: "num", label: "Art left", min: 0, max: 600, step: 2, unit: "px" },
-      { k: "artY", t: "num", label: "Art top", min: 44, max: 400, step: 2, unit: "px" },
-      { k: "artW", t: "num", label: "Art width", min: 60, max: 400, step: 2, unit: "px" },
-      { k: "artH", t: "num", label: "Art height", min: 60, max: 360, step: 2, unit: "px" },
+      { t: "sub", label: "Game art" },
+      { k: "artX", t: "num", label: "X", min: 0, max: 600, step: 2, unit: "px" },
+      { k: "artY", t: "num", label: "Y", min: 44, max: 400, step: 2, unit: "px" },
+      { k: "artW", t: "num", label: "W", min: 60, max: 400, step: 2, unit: "px" },
+      { k: "artH", t: "num", label: "H", min: 60, max: 360, step: 2, unit: "px" },
       { k: "artMode", t: "choice", label: "Sizing", choices: [["fit", "Fit"], ["fill", "Fill"], ["stretch", "Stretch"]],
         hint: "Scraped art comes in every shape — box art is tall, screenshots are 4:3. Fit keeps the aspect inside your box, Fill crops to cover it, Stretch distorts." }
     ].concat(artFields(["gameArt"])).concat([
@@ -2827,36 +2846,45 @@
       { t: "note", label: "Game art is each game's scraped image, so the theme sets only where it goes — the file here is a stand-in and is never written into the theme or the zip. The box below is exported as a centred anchor plus the sizing property, so art of any shape stays inside it." }
     ]) }],
     menu: [{ name: "Menu", open: true, fields: [
-      { k: "menuFont", t: "num", label: "Row size", min: 14, max: 32, step: 1, unit: "px" },
+      { t: "sub", label: "Rows" },
+      { k: "menuFont", t: "num", label: "Size", min: 14, max: 32, step: 1, unit: "px" },
       { k: "fMenu", t: "font", label: "Row font" },
-      { k: "menuTitleFont", t: "num", label: "Title size", min: 12, max: 32, step: 1, unit: "px" },
+      { t: "sub", label: "Title" },
+      { k: "menuTitleFont", t: "num", label: "Size", min: 12, max: 32, step: 1, unit: "px" },
       { k: "fMenuTitle", t: "font", label: "Title font" },
-      { k: "menuFootFont", t: "num", label: "Footer size", min: 10, max: 28, step: 1, unit: "px" },
+      { t: "sub", label: "Footer" },
+      { k: "menuFootFont", t: "num", label: "Size", min: 10, max: 28, step: 1, unit: "px" },
       { k: "fMenuFoot", t: "font", label: "Footer font" }
     ].concat(artFields(["arrow"])).concat([
       { t: "note", label: "Row pitch and pill width come from the build (38px / 620px); the fonts and colours above are yours." }
     ]) }],
     keyboard: [
       { name: "Keyboard", open: true, fields: [
+        { t: "sub", label: "Keys" },
         { k: "kbKey", t: "color", label: "Key fill" },
-        { k: "kbPress", t: "color", label: "Key press flash", hint: "Keys flash this colour when pressed." },
-        { k: "kbFlash", t: "num", label: "Flash duration", min: 40, max: 400, step: 10, unit: "ms" },
+        { t: "sub", label: "Press feedback" },
+        { k: "kbPress", t: "color", label: "Flash colour", hint: "Keys flash this colour when pressed." },
+        { k: "kbFlash", t: "num", label: "Duration", min: 40, max: 400, step: 10, unit: "ms" },
+        { t: "sub", label: "Letters" },
         { k: "kbFontOn", t: "bool", label: "Own letter font",
           hint: "Off, the letters use the menu row font, which is what the engine does. On, the keyboard carries its own size and face." },
-        { k: "kbFont", t: "num", label: "Letter size", min: 10, max: 44, step: 1, unit: "px" },
-        { k: "fKbKey", t: "font", label: "Letter font" },
-        { k: "kbWidth", t: "num", label: "Grid width", min: 400, max: 640, step: 2, unit: "px" },
-        { k: "kbTop", t: "num", label: "Grid top", min: 60, max: 220, step: 2, unit: "px" },
-        { k: "kbSpacing", t: "num", label: "Gap between keys", min: 0, max: 16, step: 1, unit: "px" },
-        { k: "kbRadius", t: "num", label: "Key radius", min: 0, max: 22, step: 1, unit: "px" },
-        { k: "kbIcon", t: "num", label: "Key icon size", min: 12, max: 40, step: 1, unit: "px" },
+        { k: "kbFont", t: "num", label: "Size", min: 10, max: 44, step: 1, unit: "px" },
+        { k: "fKbKey", t: "font", label: "Face" },
+        { t: "sub", label: "Grid" },
+        { k: "kbWidth", t: "num", label: "Width", min: 400, max: 640, step: 2, unit: "px" },
+        { k: "kbTop", t: "num", label: "Top", min: 60, max: 220, step: 2, unit: "px" },
+        { t: "sub", label: "Key shape" },
+        { k: "kbSpacing", t: "num", label: "Gap", min: 0, max: 16, step: 1, unit: "px" },
+        { k: "kbRadius", t: "num", label: "Radius", min: 0, max: 22, step: 1, unit: "px" },
+        { k: "kbIcon", t: "num", label: "Icon size", min: 12, max: 40, step: 1, unit: "px" },
         { t: "note", label: "Key letters follow the menu row font unless you give the keyboard its own above — the engine has no separate size for them otherwise." }
       ]},
       { name: "Key icons", fields: artFields(["kbBackspace", "kbEnter", "kbShiftIcon", "kbShiftOn"]).concat([ART_NOTE]) }
     ],
     saver: [
       { name: "Screensaver", open: true, fields: [
-        { k: "ssClock", t: "num", label: "Clock size", min: 40, max: 180, step: 2, unit: "px" },
+        { t: "sub", label: "Clock" },
+        { k: "ssClock", t: "num", label: "Size", min: 40, max: 180, step: 2, unit: "px" },
         { k: "ssLock", t: "bool", label: "Show lock icon", hint: "The clock locks every button except Select." },
         { k: "ssCharge", t: "bool", label: "Preview charging state", hint: "While charging, the date line becomes battery + charge %." },
         { k: "fSaver", t: "font", label: "Clock font" }
@@ -2898,11 +2926,47 @@
     placeExport();
   }
 
-  // the track's filled portion is drawn from this, so it follows the value
-  function setFill(input) {
-    var min = parseFloat(input.min), max = parseFloat(input.max);
-    var pct = max > min ? ((parseFloat(input.value) - min) / (max - min)) * 100 : 0;
-    input.style.setProperty("--fill", pct.toFixed(2) + "%");
+
+  // Figma's trick: the label is a scrubber and the value is editable in place,
+  // so a property costs one short row instead of a labelled full-width slider.
+  function numProp(fd) {
+    var row = el("div"); row.className = "prop";
+    var lab = el("label", null, fd.label);
+    var inp = el("input"); inp.className = "num"; inp.type = "text"; inp.size = 6;
+    inp.title = fd.label + " \u2014 " + fd.min + " to " + fd.max + (fd.unit || "") + ", drag the label to scrub";
+
+    function show() { inp.value = S[fd.k] + (fd.unit || ""); }
+    function commit(v) {
+      if (!isFinite(v)) { show(); return; }
+      setNum(fd.k, v);
+      show(); render();
+    }
+    show();
+    inp.addEventListener("change", function () { commit(parseFloat(inp.value)); });
+    inp.addEventListener("keydown", function (e) {
+      var step = (fd.step || 1) * (e.shiftKey ? 10 : 1);
+      if (e.key === "ArrowUp") { e.preventDefault(); commit(S[fd.k] + step); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); commit(S[fd.k] - step); }
+    });
+
+    lab.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      var x0 = ev.clientX, from = S[fd.k];
+      var span = (fd.max - fd.min) || 1;
+      function move(e) {
+        // a drag the width of the rail covers the property's whole range
+        commit(from + ((e.clientX - x0) / 260) * span);
+      }
+      function up() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+
+    row.appendChild(lab); row.appendChild(inp);
+    return row;
   }
 
   function buildField(fd) {
@@ -2914,13 +2978,18 @@
       wrap.setAttribute("aria-disabled", "true");
       fd = Object.assign({}, fd, { hint: fd.hint || "Stock EmulationStation ignores this." });
     }
+    if (fd.t === "sub") {
+      var sh = el("div", null, fd.label); sh.className = "subhead";
+      return sh;
+    }
     if (fd.t === "note") {
       var n = el("div", null, fd.label); n.className = "hint"; n.style.marginTop = "2px";
       wrap.appendChild(n);
       return wrap;
     }
     if (fd.t === "choice") {
-      wrap.className = "field";
+      // a segmented control never fits beside its label at rail width
+      wrap.className = "field choice-wide";
       wrap.appendChild(el("label", null, fd.label));
       var seg = el("div"); seg.className = "seg";
       fd.choices.forEach(function (c) {
@@ -3018,6 +3087,7 @@
       return wrap;
     }
     if (fd.t === "color") {
+      wrap.className = "field colour";
       wrap.appendChild(el("label", null, fd.label));
       var row = el("div"); row.className = "row";
       // the field shows what the theme file will say: eight digits once the
@@ -3029,7 +3099,7 @@
         return S[fd.k] + (h.length < 2 ? "0" + h : h);
       }
       var sw = el("input"); sw.type = "color"; sw.value = S[fd.k];
-      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.value = shown();
+      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.size = 9; tx.value = shown();
       tx.title = "Paste a colour as RGB, RRGGBB or RRGGBBAA - the alpha byte sets the opacity below.";
       sw.addEventListener("input", function () { S[fd.k] = sw.value.toUpperCase(); tx.value = shown(); render(); });
       tx.addEventListener("change", function () {
@@ -3045,20 +3115,23 @@
         render();
       });
       row.appendChild(sw); row.appendChild(tx); wrap.appendChild(row);
+      // opacity belongs to the colour, so it sits on the same row
       if (S[fd.k + "A"] != null) {
-        var arow = el("div", { gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" });
-        var alab = el("span", null, "opacity"); alab.className = "val";
-        var aval = el("span", null, S[fd.k + "A"] + "%"); aval.className = "val";
-        var ar = el("input"); ar.type = "range"; ar.min = 0; ar.max = 100; ar.step = 1;
-        ar.value = S[fd.k + "A"]; ar.style.flex = "1";
-        setFill(ar);
-        ar.addEventListener("input", function () {
-          S[fd.k + "A"] = parseFloat(ar.value); aval.textContent = S[fd.k + "A"] + "%";
-          tx.value = shown(); setFill(ar);
-          render();
+        var av = el("input"); av.className = "alpha"; av.type = "text"; av.size = 4;
+        av.value = S[fd.k + "A"] + "%";
+        av.title = "Opacity — the alpha byte of the colour";
+        function setA(v) {
+          if (!isFinite(v)) { av.value = S[fd.k + "A"] + "%"; return; }
+          S[fd.k + "A"] = Math.max(0, Math.min(100, Math.round(v)));
+          av.value = S[fd.k + "A"] + "%"; tx.value = shown(); render();
+        }
+        av.addEventListener("change", function () { setA(parseFloat(av.value)); });
+        av.addEventListener("keydown", function (e) {
+          var st = e.shiftKey ? 10 : 1;
+          if (e.key === "ArrowUp") { e.preventDefault(); setA(S[fd.k + "A"] + st); }
+          else if (e.key === "ArrowDown") { e.preventDefault(); setA(S[fd.k + "A"] - st); }
         });
-        arow.appendChild(alab); arow.appendChild(ar); arow.appendChild(aval);
-        wrap.appendChild(arow);
+        row.appendChild(av);
       }
     } else if (fd.t === "bool") {
       var lab = el("label", null, fd.label);
@@ -3069,17 +3142,12 @@
       wrap.appendChild(lab); wrap.appendChild(sw2);
       if (fd.hint) { var h = el("div", null, fd.hint); h.className = "hint"; wrap.appendChild(h); }
     } else {
-      var top = el("div"); top.className = "top";
-      top.appendChild(el("label", null, fd.label));
-      var v = el("span", null, S[fd.k] + (fd.unit || "")); v.className = "val";
-      top.appendChild(v);
-      var r = el("input"); r.type = "range"; r.min = fd.min; r.max = fd.max; r.step = fd.step; r.value = S[fd.k];
-      setFill(r);
-      r.addEventListener("input", function () {
-        S[fd.k] = parseFloat(r.value); v.textContent = S[fd.k] + (fd.unit || "");
-        setFill(r); render();
-      });
-      wrap.appendChild(top); wrap.appendChild(r);
+      wrap = numProp(fd);
+      if (!fd.wide) wrap.classList.add("half");
+      if (fd.customOnly && S.engine === "stock") {
+        wrap.style.opacity = ".45"; wrap.style.pointerEvents = "none";
+        wrap.setAttribute("aria-disabled", "true");
+      }
     }
     return wrap;
   }
