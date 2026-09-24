@@ -34,6 +34,13 @@ so you can walk a theme instead of inspecting it screen by screen.
   One pixel dragged is one pixel of the 640×480 screen whatever the mock-up is
   scaled to, a readout names the properties as they change, and values still
   stop at the same limits the sliders use. Works with touch.
+- **Background fills** — a colour per page (carousel, gamelist, menu-and-keyboard,
+  screensaver) instead of shipping a background image for each. The format has no
+  "fill this view with a colour" element, so the carousel and gamelist are written
+  as a text box with a `backgroundColor` and no text, which paints its whole area.
+  The menu is the exception: its background falls back to the engine's rounded
+  frame when no path is given, so it gets a 69-byte white pixel to stretch and
+  tint. Load background art and it draws over the fill instead.
 - **Colour and opacity per layer** — every colour has an opacity slider, because
   the engine expresses opacity as the alpha byte of the colour.
 - **Gradient selections** — a second colour fades top-to-bottom across the

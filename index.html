@@ -433,12 +433,17 @@
     carType: "vertical", carPosX: 0, carPosY: 0, carSizeW: 640, carSizeH: 480,
     glArt: false, artX: 360, artY: 96, artW: 260, artH: 200, artMode: "fit",
     textA: 100, pillA: 100, pillEndA: 100, pillTextA: 100,
-    helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100
+    helpPillA: 100, helpTextA: 100, helpChipA: 100, kbKeyA: 100, kbPressA: 100, bgA: 100,
+    bgSysA: 100, bgGlA: 100, bgMnuA: 100
   };
   Object.keys(PRESETS).forEach(function (name) {
     var p = PRESETS[name];
     for (var k in SHARED) if (!(k in p)) p[k] = SHARED[k];
     if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#C9C9C9" : "#0A0A0A";
+    // each page paints its own fill; they start from the theme's base colour
+    if (!("bgSys" in p)) p.bgSys = p.bg;
+    if (!("bgGl" in p)) p.bgGl = p.bg;
+    if (!("bgMnu" in p)) p.bgMnu = p.bg;
   });
 
   var S = Object.assign({}, PRESETS["Mono Dark"]);
@@ -467,6 +472,9 @@
   var ART = {};   // k -> { src, name }
   var PATHS = {}; // k -> path string written into theme.xml
   ICONS.forEach(function (i) { PATHS[i.k] = i.path; });
+  PATHS.bgSystem = "./art/system.png";
+  PATHS.bgGamelist = "./art/gamelist.png";
+  PATHS.bgMenu = "./art/menu.png";
 
   var page = "carousel";
   var cursor = 2;          // carousel selection index
@@ -627,6 +635,8 @@
   }
 
 
+  var FILL_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC";
+  var FILL_PATH = "./art/fill.png";
   var BG_TINT = {};        // per-slot <color> applied to background art
   var FRONT_EXTRAS = [];   // per-system extra art the theme draws over the carousel
   var FRONT_GEO = null;
@@ -1101,17 +1111,35 @@
 
     // ---- background art (these themes bake the hint bar into it) ----
     BG_TINT = {};
-    function bgTint(slot, view, tag, name) {
+    // useArt loads in the background, so ART[slot] is not populated yet - ask
+    // whether the file resolves instead of whether it has finished loading
+    function artExists(ref) { return !!(ref && resolve(files, baseDir, ref)); }
+    function bgTint(slot, key, ref, view, tag, name) {
       var c = r.colour(view, tag, name, "color");
-      if (c) BG_TINT[slot] = { css: c.hex, a: c.a };
+      if (!c) return;
+      BG_TINT[slot] = { css: c.hex, a: c.a };
+      // With no art behind it the colour IS the background, so it becomes the
+      // page's fill. With art, the colour only tints that art - leave the fill.
+      if (!artExists(ref)) { S[key] = c.hex; S[key + "A"] = c.a; }
     }
-    useArt(r.prop("system", "image", "staticBackground", "path") ||
-           r.prop("system", "image", "background", "path"), "bgSystem");
-    bgTint("bgSystem", "system", "image", "background");
-    useArt(r.prop("basic", "image", "background", "path") ||
-           r.prop("basic", "image", "staticBackground", "path"), "bgGamelist");
-    bgTint("bgGamelist", "basic", "image", "background");
-    useArt(r.prop("menu", "menuBackground", "menubg", "path"), "bgMenu");
+    var sysFill = r.colour("system", "text", "pageFill", "backgroundColor");
+    if (sysFill) { S.bgSys = sysFill.hex; S.bgSysA = sysFill.a; }
+    var glFill = r.colour("basic", "text", "pageFill", "backgroundColor");
+    if (glFill) { S.bgGl = glFill.hex; S.bgGlA = glFill.a; }
+
+    var sysBgRef = r.prop("system", "image", "staticBackground", "path") ||
+                   r.prop("system", "image", "background", "path");
+    useArt(sysBgRef, "bgSystem");
+    bgTint("bgSystem", "bgSys", sysBgRef, "system", "image", "background");
+
+    var glBgRef = r.prop("basic", "image", "background", "path") ||
+                  r.prop("basic", "image", "staticBackground", "path");
+    useArt(glBgRef, "bgGamelist");
+    bgTint("bgGamelist", "bgGl", glBgRef, "basic", "image", "background");
+
+    var mnuBgRef = r.prop("menu", "menuBackground", "menubg", "path");
+    useArt(mnuBgRef, "bgMenu");
+    bgTint("bgMenu", "bgMnu", mnuBgRef, "menu", "menuBackground", "menubg");
 
     // background colour: fall back to the gamelist text colour's opposite is
     // guesswork, so take it from the art if present, else leave as is.
@@ -1290,6 +1318,24 @@
       if (S.pillA === 0) S.pillA = 100;
       if (!keepTheme) S.logoScale = 1;
     }
+  }
+
+  // The menu's background is the one the keyboard popup shares (it reads the
+  // same MenuTheme), and the pop-up draws over the carousel.
+  function bgKey(pg) {
+    var p = pg || page;
+    if (p === "gamelist") return "bgGl";
+    if (p === "menu" || p === "keyboard") return "bgMnu";
+    if (p === "saver") return "bg";
+    return "bgSys";
+  }
+  function bgSlot(pg) {
+    var k = bgKey(pg);
+    return k === "bgGl" ? "bgGamelist" : k === "bgMnu" ? "bgMenu" : "bgSystem";
+  }
+
+  function bgPath(slot) {
+    return (ART[slot] && PATHS[slot]) ? PATHS[slot] : FILL_PATH;
   }
 
   function pillBg() {
@@ -1965,7 +2011,7 @@
   function render() {
     var scr = document.getElementById("screen");
     scr.innerHTML = "";
-    scr.style.background = css("bg");
+    scr.style.background = css(bgKey());
     drawBackdrop(scr);
     if (page === "saver") { drawSaver(scr); }
     else if (page === "keyboard") { drawTopBar(scr); drawKeyboard(scr); }
@@ -2120,10 +2166,19 @@
     x.push('    <formatVersion>7</formatVersion>');
     x.push('    <feature supported="carousel">');
     x.push('    <view name="system">');
-    x.push('    <image name="staticBackground">');
-    x.push('\t<path>./art/system.png</path>');
-    x.push('\t<origin>0 0</origin><pos>0 0</pos><size>1 1</size><zIndex>0</zIndex>');
-    x.push('    </image>');
+    if (ART.bgSystem) {
+      x.push('    <image name="staticBackground">');
+      x.push('\t<path>' + PATHS.bgSystem + '</path>');
+      x.push('\t<origin>0 0</origin><pos>0 0</pos><size>1 1</size><zIndex>0</zIndex>');
+      x.push('\t<color>' + hex8("bgSys") + '</color>');
+      x.push('    </image>');
+    } else {
+      x.push('    <!-- flat fill: a text box with a background and no text -->');
+      x.push('    <text name="pageFill" extra="true">');
+      x.push('\t<origin>0 0</origin><pos>0 0</pos><size>1 1</size><zIndex>0</zIndex>');
+      x.push('\t<backgroundColor>' + hex8("bgSys") + '</backgroundColor>');
+      x.push('    </text>');
+    }
     x.push('    <sound name="directory"><path>./music/</path></sound>');
     if (S.carLogos) {
       x.push('    <image name="logo">');
@@ -2219,10 +2274,19 @@
     });
     x.push('');
     x.push('    <view name="basic, detailed, video">');
-    x.push('    <image name="background" extra="true">');
-    x.push('\t<size>1 1</size><pos>0 0</pos><origin>0 0</origin>');
-    x.push('\t<path>./art/gamelist.png</path><zIndex>0</zIndex>');
-    x.push('    </image>');
+    if (ART.bgGamelist) {
+      x.push('    <image name="background" extra="true">');
+      x.push('\t<size>1 1</size><pos>0 0</pos><origin>0 0</origin>');
+      x.push('\t<path>' + PATHS.bgGamelist + '</path><zIndex>0</zIndex>');
+      x.push('\t<color>' + hex8("bgGl") + '</color>');
+      x.push('    </image>');
+    } else {
+      x.push('    <!-- flat fill: a text box with a background and no text -->');
+      x.push('    <text name="pageFill" extra="true">');
+      x.push('\t<size>1 1</size><pos>0 0</pos><origin>0 0</origin><zIndex>0</zIndex>');
+      x.push('\t<backgroundColor>' + hex8("bgGl") + '</backgroundColor>');
+      x.push('    </text>');
+    }
     x.push('    <textlist name="gamelist">');
     if (S.glFit) x.push('         <selectorFitContent>true</selectorFitContent><!-- pill hugs the game name -->');
     x.push('         <selectorColor>' + hex8("pill") + '</selectorColor>');
@@ -2271,7 +2335,10 @@
     x.push('    </view>');
     x.push('');
     x.push('    <view name="menu">');
-    x.push('    <menuBackground name="menubg"><path>./art/menu.png</path></menuBackground>');
+    // a missing path here falls back to the engine's own :/frame.png panel
+    // (ThemeData.cpp:1435), so the fill pixel has to be written out
+    x.push('    <menuBackground name="menubg"><path>' + bgPath("bgMenu") + '</path>' +
+           '<color>' + hex8("bgMnu") + '</color></menuBackground>');
     x.push('    <menuArrow name="menuarrow">');
     x.push('\t<path>' + PATHS.arrow + '</path><optionPath>' + PATHS.arrow + '</optionPath>');
     x.push('    </menuArrow>');
@@ -2384,7 +2451,12 @@
 
   var GENERAL = [
     { name: "Palette", open: true, fields: [
-      { k: "bg", t: "color", label: "Background" },
+      { k: "bgSys", t: "color", label: "Carousel background" },
+      { k: "bgGl", t: "color", label: "Gamelist background" },
+      { k: "bgMnu", t: "color", label: "Menu & keyboard background",
+        hint: "The keyboard popup reads the menu's background, so these are one setting on the device." },
+      { k: "bg", t: "color", label: "Screensaver background" },
+      { t: "note", label: "Each page paints its fill by stretching a one-pixel image and multiplying it by this colour — the same trick published themes use, so no background art is needed. Load art below and it draws over the fill." },
       { k: "text", t: "color", label: "Text" },
       { k: "pill", t: "color", label: "Selection pill" },
       { k: "pillGrad", t: "bool", label: "Gradient pill", hint: "Fades from the pill colour to the second colour, top to bottom." },
@@ -2956,6 +3028,12 @@
 
     // the edited theme.xml always wins
     add(name + "/theme.xml", enc.encode(document.getElementById("xml").textContent + "\n"));
+
+    // the menu is the one page that cannot be filled by a colour alone: with no
+    // path it falls back to the engine's rounded frame, so it gets a 1x1 pixel
+    // to stretch and tint
+    if (bgPath("bgMenu") === FILL_PATH)
+      add(name + "/" + FILL_PATH.replace(/^\.\//, ""), dataURLToBytes(FILL_PNG));
 
     // anything loaded in the tool ships at the path the file refers to
     Object.keys(ART).forEach(function (k) {
