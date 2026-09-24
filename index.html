@@ -393,7 +393,7 @@
   .export h2 { font-size: 16px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--content); }
   .export .actions { margin-left: auto; display: flex; gap: 6px; }
   pre.xml {
-    margin: 0; max-height: 200px; overflow: auto; background: var(--bg-2);
+    margin: 0; max-height: min(60vh, 560px); overflow: auto; background: var(--bg-2);
     border: 0; border-radius: var(--r-surface); padding: var(--s600);
     font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--content);
     white-space: pre; tab-size: 2;
@@ -402,6 +402,7 @@
     font-size: 12px; line-height: 16px; color: var(--content-2); max-width: 66ch;
     border-left: 2px solid var(--border); padding-left: var(--s500);
   }
+  .sheetbox.wide { width: min(900px, calc(100vw - 32px)); }
   .sheetbox {
     width: min(620px, calc(100vw - 32px)); padding: var(--s700);
     background: var(--bg); color: var(--content);
@@ -410,7 +411,7 @@
   .sheetbox::backdrop { background: var(--overlay); }
   .sheetbox .head { display: flex; align-items: center; gap: var(--s500); margin-bottom: var(--s600); }
   .sheetbox h2 { margin: 0; font-size: 16px; font-weight: 600; }
-  .sheetbox .head .btn { margin-left: auto; }
+  .sheetbox .head .btn:first-of-type { margin-left: auto; }
   .sheetbox .note { border-left: 0; padding-left: 0; max-width: none; font-size: 13px; line-height: 19px; }
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -524,21 +525,21 @@
     </div>
     <div class="legend" id="legend"></div>
 
-    <div class="export">
-      <div class="head">
-        <h2>theme.xml</h2>
-        <div class="actions">
-          <button class="btn" id="copy">Copy</button>
-          <button class="btn" id="download">theme.xml</button>
-          <button class="btn" id="about">How this works</button>
-          <button class="btn primary" id="zip">Download .zip</button>
-        </div>
-      </div>
-      <pre class="xml" id="xml"></pre>
-
-    </div>
-  </section>
+    </section>
 </main>
+
+<button class="btn primary" id="zip">Download .zip</button>
+
+<dialog class="sheetbox wide" id="xmlbox">
+  <div class="head">
+    <h2>theme.xml</h2>
+    <button class="btn" id="copy">Copy</button>
+    <button class="btn" id="download">theme.xml</button>
+    <button class="btn" id="about">How this works</button>
+    <button class="btn" id="xmlclose" aria-label="Close">Close</button>
+  </div>
+  <pre class="xml" id="xml"></pre>
+</dialog>
 
 <dialog class="sheetbox" id="aboutbox">
   <div class="head">
@@ -3515,7 +3516,6 @@
     });
     // on a phone the export panel lives in this rail, so clearing it above
     // takes the panel - and #xml with it - out of the document
-    placeExport();
   }
 
 
@@ -3987,9 +3987,13 @@
     fl.appendChild(fi);
 
     box.appendChild(zl); box.appendChild(fl);
+    var xmlBtn = el("button", null, "theme.xml");
+    xmlBtn.className = "btn"; xmlBtn.type = "button";
+    xmlBtn.addEventListener("click", function () { openDlg(xmlBox); });
+    box.appendChild(xmlBtn);
     // moved, not rebuilt, so the handler bound to it stays bound
     var zip = document.getElementById("zip");
-    if (zip) box.appendChild(zip);
+    if (zip) { zip.hidden = false; box.appendChild(zip); }
   }
 
   function downloadZip() {
@@ -4057,30 +4061,25 @@
   grabber.addEventListener("pointerup", function () { dragY = null; });
 
   // the XML panel belongs in the sheet on a phone, under the console on desktop
-  var exportEl = document.querySelector(".export");
   var stageEl = document.querySelector(".stage");
   var railBody = document.getElementById("railbody");
   var aboutBox = document.getElementById("aboutbox");
+  var xmlBox = document.getElementById("xmlbox");
+  function openDlg(d) { if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
+  function closeDlg(d) { if (d.close) d.close(); else d.removeAttribute("open"); }
   document.getElementById("about").addEventListener("click", function () {
-    if (aboutBox.showModal) aboutBox.showModal(); else aboutBox.setAttribute("open", "");
+    closeDlg(xmlBox); openDlg(aboutBox);
   });
-  document.getElementById("aboutclose").addEventListener("click", function () {
-    if (aboutBox.close) aboutBox.close(); else aboutBox.removeAttribute("open");
-  });
+  document.getElementById("aboutclose").addEventListener("click", function () { closeDlg(aboutBox); });
+  document.getElementById("xmlclose").addEventListener("click", function () { closeDlg(xmlBox); });
 
   document.getElementById("zoomin").addEventListener("click", function () { stepZoom(1); });
   document.getElementById("zoomout").addEventListener("click", function () { stepZoom(-1); });
 
-  function placeExport() {
-    var target = isMobile() ? railBody : stageEl;
-    if (exportEl.parentElement !== target) target.appendChild(exportEl);
-  }
-
-  function onResize() { placeExport(); fitScreen(); }
+  function onResize() { fitScreen(); }
   window.addEventListener("resize", onResize);
   window.addEventListener("orientationchange", onResize);
   resetArt(true);
-  placeExport();
   if (/sheet/i.test(location.hash)) setSheet(true);
 
   if (/general/i.test(location.hash)) railMode = "general";
