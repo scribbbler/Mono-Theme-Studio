@@ -244,15 +244,27 @@
   .tabs .btn:hover { background: var(--bg-2); color: var(--content); }
   .tabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
   .console {
-    position: relative; width: 820px; height: 1150px;
+    position: relative; width: 730px; height: 1056px;
     transform-origin: top left;
   }
-  .console .shell {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    color: var(--content-3); opacity: .45; pointer-events: none;
+  /* The device, from the Figma source: 730x1056 body, 712x552 bezel inset 9px,
+     and the d-pad, action cluster and menu button as the file's own vectors. */
+  .console .shell { position: absolute; inset: 0; pointer-events: none; }
+  .shell .body {
+    position: absolute; inset: 0; background: #292929;
+    border-radius: 18px 18px 128px 20px;
+  }
+  .shell .bezel {
+    position: absolute; left: 9px; top: 9px; width: 712px; height: 552px;
+    background: rgba(0, 0, 0, .4); border-radius: 8px;
+  }
+  .shell img { position: absolute; display: block; }
+  .shell .pill {
+    position: absolute; width: 86px; height: 28px; margin: -14px 0 0 -43px;
+    background: #000; border-radius: 99px; transform: rotate(-45deg);
   }
   .screen {
-    position: absolute; left: 90px; top: 90px;
+    position: absolute; left: 45px; top: 45px;
     width: 640px; height: 480px; overflow: hidden;
     border-radius: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
   }
@@ -360,53 +372,15 @@
   <section class="stage">
     <div class="tabs" id="tabs"></div>
     <div class="console" id="console">
-      <svg class="shell" viewBox="0 0 820 1150" aria-hidden="true" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-        <!-- shoulder buttons on the side edges -->
-        <path d="M10 176h-8v54h8" /><path d="M10 250h-8v54h8" />
-        <path d="M810 176h8v54h-8" /><path d="M810 250h8v54h-8" />
-        <!-- body: rounded brick with a chamfered speaker corner -->
-        <path d="M66 18h688a56 56 0 0 1 56 56v952l-96 106H66a56 56 0 0 1-56-56V74a56 56 0 0 1 56-56z" />
-        <!-- screen glass -->
-        <rect x="70" y="70" width="680" height="520" rx="12" />
-        <!-- d-pad: cross with a centre disc -->
-        <path d="M158 762v-64a10 10 0 0 1 10-10h50v-50a10 10 0 0 1 10-10h64a10 10 0 0 1 10 10v50h50a10 10 0 0 1 10 10v64a10 10 0 0 1-10 10h-50v50a10 10 0 0 1-10 10h-64a10 10 0 0 1-10-10v-50h-50a10 10 0 0 1-10-10z" />
-        <circle cx="250" cy="730" r="22" />
-        <!-- menu button -->
-        <circle cx="410" cy="700" r="24" />
-        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
-           font-size="13" font-weight="600" text-anchor="middle" opacity=".7">
-          <text x="410" y="748">MENU</text>
-        </g>
-        <!-- action buttons: X top, Y left, A right, B bottom -->
-        <circle cx="620" cy="686" r="30" /><circle cx="556" cy="750" r="30" />
-        <circle cx="684" cy="750" r="30" /><circle cx="620" cy="814" r="30" />
-        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
-           font-size="21" font-weight="600" text-anchor="middle" opacity=".85">
-          <text x="620" y="694">X</text><text x="556" y="758">Y</text>
-          <text x="684" y="758">A</text><text x="620" y="822">B</text>
-        </g>
-        <!-- select / start, slanted like the real thing -->
-        <g transform="rotate(-24 360 900)">
-          <rect x="326" y="886" width="68" height="26" rx="13" />
-        </g>
-        <g transform="rotate(-24 470 900)">
-          <rect x="436" y="886" width="68" height="26" rx="13" />
-        </g>
-        <g fill="currentColor" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif"
-           font-size="12" font-weight="600" text-anchor="middle" opacity=".65">
-          <text x="352" y="952" transform="rotate(-24 352 952)">SELECT</text>
-          <text x="462" y="952" transform="rotate(-24 462 952)">START</text>
-        </g>
-        <!-- speaker grille in the chamfered corner -->
-        <g opacity=".7" stroke-width="7">
-          <line x1="604" y1="1064" x2="652" y2="1016" />
-          <line x1="628" y1="1064" x2="676" y2="1016" />
-          <line x1="652" y1="1064" x2="700" y2="1016" />
-          <line x1="676" y1="1064" x2="716" y2="1024" />
-          <line x1="700" y1="1064" x2="728" y2="1036" />
-        </g>
-      </svg>
+      <div class="shell" aria-hidden="true">
+        <div class="body"></div>
+        <div class="bezel"></div>
+        <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjIxMCIgaGVpZ2h0PSIyMTAiIHZpZXdCb3g9IjAgMCAyMTAgMjEwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBpZD0iRCBQYWQiIGQ9Ik0xNDEgNjNDMTQxIDY2LjMxMzcgMTQzLjY4NiA2OSAxNDcgNjlIMTk0QzIwMi44MzcgNjkgMjEwIDc2LjE2MzQgMjEwIDg1VjEyNUMyMTAgMTMzLjgzNyAyMDIuODM3IDE0MSAxOTQgMTQxSDE0N0MxNDMuNjg2IDE0MSAxNDEgMTQzLjY4NiAxNDEgMTQ3VjE5NEMxNDEgMjAyLjgzNyAxMzMuODM3IDIxMCAxMjUgMjEwSDg1Qzc2LjE2MzQgMjEwIDY5IDIwMi44MzcgNjkgMTk0VjE0N0M2OSAxNDMuNjg2IDY2LjMxMzcgMTQxIDYzIDE0MUgxNkM3LjE2MzQ0IDE0MSAwIDEzMy44MzcgMCAxMjVWODVDMCA3Ni4xNjM0IDcuMTYzNDQgNjkgMTYgNjlINjNDNjYuMzEzNyA2OSA2OSA2Ni4zMTM3IDY5IDYzVjE2QzY5IDcuMTYzNDQgNzYuMTYzNCAwIDg1IDBIMTI1QzEzMy44MzcgMCAxNDEgNy4xNjM0NCAxNDEgMTZWNjNaIiBmaWxsPSJibGFjayIvPgo8L3N2Zz4K" width="210" height="210" style="left:51px;top:616px" alt="">
+        <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjIyNyIgaGVpZ2h0PSIyMjciIHZpZXdCb3g9IjAgMCAyMjcgMjI3IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyBpZD0iQWN0aW9uIEJ1dHRvbnMiPgo8Y2lyY2xlIGlkPSJFbGxpcHNlIDEiIGN4PSIxMTMuNSIgY3k9IjE4OCIgcj0iMzkiIGZpbGw9ImJsYWNrIi8+CjxjaXJjbGUgaWQ9IkVsbGlwc2UgMiIgY3g9IjExMy41IiBjeT0iMzkiIHI9IjM5IiBmaWxsPSJibGFjayIvPgo8Y2lyY2xlIGlkPSJFbGxpcHNlIDFfMiIgY3g9IjE4OCIgY3k9IjExMy41IiByPSIzOSIgZmlsbD0iYmxhY2siLz4KPGNpcmNsZSBpZD0iRWxsaXBzZSAyXzIiIGN4PSIzOS41IiBjeT0iMTEzIiByPSIzOSIgZmlsbD0iYmxhY2siLz4KPC9nPgo8L3N2Zz4K" width="227" height="227" style="left:461.5px;top:608px" alt="">
+        <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjQ2IiBoZWlnaHQ9IjQ2IiB2aWV3Qm94PSIwIDAgNDYgNDYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgaWQ9Ik1lbnUiIGN4PSIyMyIgY3k9IjIzIiByPSIyMyIgZmlsbD0iYmxhY2siLz4KPC9zdmc+Cg==" width="46" height="46" style="left:342px;top:625px" alt="">
+        <div class="pill" style="left:304px;top:887px"></div>
+        <div class="pill" style="left:426px;top:887px"></div>
+      </div>
       <div class="screen" id="screen"></div>
     </div>
     <div class="legend" id="legend"></div>
@@ -2401,7 +2375,7 @@
     renderXML();
   }
 
-  var CW = 820, CH = 1150;   // wireframe console box
+  var CW = 730, CH = 1056;   // device box, from the Figma frame
   function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
 
   // On a phone the device is the backdrop and the controls ride over it, so
@@ -3321,18 +3295,21 @@
 
   // The wireframe's controls behave the way the device does, so the preview
   // can be walked instead of jumped between with tabs.
+  // Taken from the vectors themselves: the d-pad's arms are the 72px band
+  // between 69 and 141 in its 210 box, and the action circles are r39 at the
+  // four points of a 227 box.
   var HITS = [
-    { k: "up",     x: 218, y: 684, w: 62, h: 52, label: "D-pad up" },
-    { k: "down",   x: 218, y: 784, w: 62, h: 52, label: "D-pad down" },
-    { k: "left",   x: 154, y: 734, w: 52, h: 52, label: "D-pad left" },
-    { k: "right",  x: 290, y: 734, w: 52, h: 52, label: "D-pad right" },
-    { k: "x",      x: 590, y: 656, w: 60, h: 60, label: "X" },
-    { k: "y",      x: 526, y: 720, w: 60, h: 60, label: "Y" },
-    { k: "a",      x: 654, y: 720, w: 60, h: 60, label: "A" },
-    { k: "b",      x: 590, y: 784, w: 60, h: 60, label: "B" },
-    { k: "menu",   x: 384, y: 674, w: 52, h: 52, label: "Menu" },
-    { k: "select", x: 312, y: 872, w: 92, h: 48, label: "Select" },
-    { k: "start",  x: 424, y: 872, w: 92, h: 48, label: "Start" }
+    { k: "up",     x: 120,   y: 616,    w: 72,    h: 69,    label: "D-pad up" },
+    { k: "down",   x: 120,   y: 757,    w: 72,    h: 69,    label: "D-pad down" },
+    { k: "left",   x: 51,    y: 685,    w: 69,    h: 72,    label: "D-pad left" },
+    { k: "right",  x: 192,   y: 685,    w: 69,    h: 72,    label: "D-pad right" },
+    { k: "x",      x: 536,   y: 608,    w: 78,    h: 78,    label: "X" },
+    { k: "y",      x: 462,   y: 682,    w: 78,    h: 78,    label: "Y" },
+    { k: "a",      x: 610.5, y: 682.5,  w: 78,    h: 78,    label: "A" },
+    { k: "b",      x: 536,   y: 757,    w: 78,    h: 78,    label: "B" },
+    { k: "menu",   x: 342,   y: 625,    w: 46,    h: 46,    label: "Menu" },
+    { k: "select", x: 263.7, y: 846.7,  w: 80.6,  h: 80.6,  label: "Select" },
+    { k: "start",  x: 385.7, y: 846.7,  w: 80.6,  h: 80.6,  label: "Start" }
   ];
 
   function press(k) {

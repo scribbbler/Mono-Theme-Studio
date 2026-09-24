@@ -27,6 +27,10 @@ Selection pill, Text — with the value editable in place. Type it, arrow-key it
 or drag the label sideways to scrub. A colour, its hex and its opacity share one
 row, because on the device they are one value.
 
+The device around the screen is the Figma source rather than a sketch of it:
+its 730×1056 body, the bezel inset 9px, and the d-pad, action cluster and menu
+button as the file's own vectors, inlined so the page stays self-contained.
+
 **Six screens**, each previewed live: carousel, gamelist, menu, on-screen
 keyboard, screensaver clock, and the volume/brightness pop-up. **The mockup's
 own buttons work** — press A on the carousel to open a gamelist, B to go back,
