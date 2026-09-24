@@ -22,19 +22,43 @@
      button radii against square surfaces and checkboxes, and its 14px/500
      labels over 12px secondary text. No React, no Styletron, no build.
      ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+     Tokens. Resolved from Base Web's own source rather than eyeballed:
+     src/tokens/color-primitive-tokens.ts and the light/dark
+     color-semantic-tokens + color-component-tokens files.
+     ------------------------------------------------------------------ */
   :root {
-    /* colour - light theme semantics */
-    --bg: #FFFFFF;              /* backgroundPrimary   - mono100 */
-    --bg-2: #F6F6F6;            /* backgroundSecondary - mono200 */
-    --bg-3: #EEEEEE;            /* backgroundTertiary  - mono300, the fill of a control */
-    --content: #000000;         /* contentPrimary      - mono1000 */
-    --content-2: #545454;       /* contentSecondary    - mono800 */
-    --content-3: #757575;       /* contentTertiary     - mono700 */
-    --content-inverse: #FFFFFF;
-    --border: #CBCBCB;          /* borderOpaque        - mono500 */
-    --border-selected: #000000;
-    --accent: #276EF1;          /* blue600 */
-    --ground: #FFFFFF;
+    /* semantic colour - light */
+    --bg: #FFFFFF;              /* backgroundPrimary   */
+    --bg-2: #F3F3F3;            /* backgroundSecondary - gray50  */
+    --bg-3: #E8E8E8;            /* backgroundTertiary  - gray100 */
+    --bg-inverse: #000000;      /* backgroundInversePrimary */
+    --content: #000000;         /* contentPrimary      */
+    --content-2: #4B4B4B;       /* contentSecondary    - gray800 */
+    --content-3: #5E5E5E;       /* contentTertiary     - gray700 */
+    --content-inverse: #FFFFFF; /* contentInversePrimary */
+    --border: #F3F3F3;          /* borderOpaque        */
+    --border-selected: #000000; /* borderSelected      */
+    --disabled-bg: #F3F3F3;     /* backgroundStateDisabled */
+    --disabled-fg: #A6A6A6;     /* contentStateDisabled - gray400 */
+
+    /* component tokens - light */
+    --btn-primary-fill: #000000;    --btn-primary-text: #FFFFFF;
+    --btn-primary-hover: #282828;   --btn-primary-active: #4B4B4B;
+    --btn-secondary-fill: #F3F3F3;  --btn-secondary-text: #000000;
+    --btn-secondary-hover: #DDDDDD; --btn-secondary-active: #C6C6C6;
+    --btn-tertiary-fill: transparent; --btn-tertiary-text: #000000;
+    --btn-tertiary-hover: #F3F3F3;  --btn-tertiary-active: #E8E8E8;
+    --input-fill: #F3F3F3;          --input-fill-active: #FFFFFF;
+    --input-placeholder: #5E5E5E;
+    --tick-fill: #FFFFFF;           --tick-fill-hover: #F3F3F3;
+    --tick-fill-active: #E8E8E8;    --tick-fill-selected: #000000;
+    --tick-fill-selected-hover: #282828;
+    --tick-border: #5E5E5E;         --tick-mark: #FFFFFF;
+    --accent: #276EF1;              --ground: #FFFFFF;
+    /* the device is a physical object, so its shell lightens with the theme,
+       but the bezel around the screen stays the dark it is in dark mode */
+    --device-body: #C6C6C6;         --device-bezel: #191919;
     --overlay: rgba(0, 0, 0, .3);
 
     /* sizing scale */
@@ -42,32 +66,98 @@
     --s550: 14px; --s600: 16px; --s650: 18px; --s700: 20px; --s800: 24px;
     --s850: 28px; --s900: 32px; --s950: 36px; --s1000: 40px; --s1200: 48px;
 
-    /* borders */
-    --r-input: 8px;   --r-button: 8px;  --r-mini: 4px;
-    --r-surface: 0px; --r-check: 0px;   --r-pop: 8px;
+    /* borders - Base radius tokens */
+    --radius100: 2px; --radius200: 4px; --radius300: 8px; --radius400: 12px;
+    --r-button: 8px;  --r-input: 8px;   --r-check: 0px;   --r-pop: 8px;
+    --r-surface: 0px; --r-mini: 4px;
 
-    /* type */
+    /* ---- component size ----
+       Base ships every control in mini / compact / default / large, and the
+       whole UI takes one size at a time. Mobile-first on Base's own
+       breakpoints (small 320, medium 600, large 1136): phone and tablet get
+       "default", the desktop breakpoint drops to "compact". Heights are Base's
+       own arithmetic, not chosen numbers:
+         button = lineHeight + 2*paddingY             (default 20+28=48, compact 16+20=36)
+         input  = lineHeight + 2*paddingY + 2*border  (default 24+20+4=48, compact 20+12+4=36)  */
+    --ctl-h: 48px;              /* default */
+    --btn-py: 14px;             /* scale550 */
+    --btn-px: 16px;             /* scale600 */
+    --btn-font: 16px;           /* LabelMedium */    --btn-lh: 20px;
+    --in-py: 10px;              /* scale400 */
+    --in-px: 14px;              /* scale550 */
+    --in-font: 16px;            /* ParagraphMedium */ --in-lh: 24px;
+    --in-border: 2px;
+    --tick-size: 24px;
+
+    /* type - Base font scale */
+    --font-xs: 12px;   --lh-xs: 16px;    /* LabelXSmall  font150 */
+    --font-sm: 14px;   --lh-sm: 20px;    /* ParagraphSmall font200 */
+    --font-md: 16px;   --lh-md: 20px;    /* LabelMedium  font350 */
     --sans: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
     --mono: "Lucida Console", Monaco, monospace;
   }
+  /* Base's "large" breakpoint is the desktop one: a precise pointer, so the
+     controls step down to "compact". Below it - tablet and phone - they stay
+     at "default", where every target clears 48px. */
+  @media (min-width: 1136px) {
+    :root {
+      --ctl-h: 36px;
+      --btn-py: 10px; --btn-px: 12px; --btn-font: 14px; --btn-lh: 16px;
+      --in-py: 6px;   --in-px: 14px;  --in-font: 14px;  --in-lh: 20px;
+      --tick-size: 20px;
+    }
+  }
+
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141414; --bg-2: #1F1F1F; --bg-3: #333333;
-      --content: #FFFFFF; --content-2: #999999; --content-3: #6B6B6B;
-      --content-inverse: #000000;
-      --border: #292929; --border-selected: #FFFFFF;
-      --accent: #335BA3; --ground: #000000;
+      --bg: #161616; --bg-2: #292929; --bg-3: #383838; --bg-inverse: #C4C4C4;
+      --content: #DEDEDE; --content-2: #C4C4C4; --content-3: #ABABAB;
+      --content-inverse: #161616;
+      --border: #292929; --border-selected: #DEDEDE;
+      --disabled-bg: #292929; --disabled-fg: #5D5D5D;
+
+      --btn-primary-fill: #C4C4C4;    --btn-primary-text: #161616;
+      --btn-primary-hover: #ABABAB;   --btn-primary-active: #8C8C8C;
+      --btn-secondary-fill: #292929;  --btn-secondary-text: #DEDEDE;
+      --btn-secondary-hover: #484848; --btn-secondary-active: #5D5D5D;
+      --btn-tertiary-fill: transparent; --btn-tertiary-text: #DEDEDE;
+      --btn-tertiary-hover: #292929;  --btn-tertiary-active: #383838;
+      --input-fill: #292929;          --input-fill-active: #161616;
+      --input-placeholder: #ABABAB;
+      --tick-fill: #161616;           --tick-fill-hover: #292929;
+      --tick-fill-active: #383838;    --tick-fill-selected: #DEDEDE;
+      --tick-fill-selected-hover: #C4C4C4;
+      --tick-border: #ABABAB;         --tick-mark: #161616;
+      --accent: #4D8AF0; --ground: #000000;
+    --device-body: #292929;  --device-bezel: #191919;
+      --device-body: #292929;  --device-bezel: #191919;
       --overlay: rgba(0, 0, 0, .7);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141414; --bg-2: #1F1F1F; --bg-3: #333333;
-    --content: #FFFFFF; --content-2: #999999; --content-3: #6B6B6B;
-    --content-inverse: #000000;
-    --border: #292929; --border-selected: #FFFFFF;
-    --accent: #335BA3; --ground: #000000;
+    --bg: #161616; --bg-2: #292929; --bg-3: #383838; --bg-inverse: #C4C4C4;
+    --content: #DEDEDE; --content-2: #C4C4C4; --content-3: #ABABAB;
+    --content-inverse: #161616;
+    --border: #292929; --border-selected: #DEDEDE;
+    --disabled-bg: #292929; --disabled-fg: #5D5D5D;
+
+    --btn-primary-fill: #C4C4C4;    --btn-primary-text: #161616;
+    --btn-primary-hover: #ABABAB;   --btn-primary-active: #8C8C8C;
+    --btn-secondary-fill: #292929;  --btn-secondary-text: #DEDEDE;
+    --btn-secondary-hover: #484848; --btn-secondary-active: #5D5D5D;
+    --btn-tertiary-fill: transparent; --btn-tertiary-text: #DEDEDE;
+    --btn-tertiary-hover: #292929;  --btn-tertiary-active: #383838;
+    --input-fill: #292929;        --input-fill-active: #161616;
+    --input-placeholder: #ABABAB;
+    --tick-fill: #161616;         --tick-fill-hover: #292929;
+    --tick-fill-active: #383838;    --tick-fill-selected: #DEDEDE;
+    --tick-fill-selected-hover: #C4C4C4;
+    --tick-border: #ABABAB;       --tick-mark: #161616;
+    --accent: #4D8AF0; --ground: #000000;
+    --device-body: #292929;  --device-bezel: #191919;
     --overlay: rgba(0, 0, 0, .7);
   }
+
 
   * { box-sizing: border-box; }
   html { height: 100%; }
@@ -97,30 +187,9 @@
   .brand h1 { font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
   .brand span { color: var(--content-3); font-size: 12px; }
   .presets { display: flex; gap: var(--s300); margin-left: auto; flex-wrap: wrap; align-items: center; }
-  select.preset {
-    height: 40px; padding: 0 var(--s600); min-width: 180px;
-    background: var(--bg-3); color: var(--content); border: 0;
-    border-radius: var(--r-button); font-size: 14px; font-weight: 500; cursor: pointer;
-  }
-  select.preset:focus {
-    outline: none; box-shadow: inset 0 0 0 2px var(--border-selected);
-  }
-  select.preset:hover { background: color-mix(in srgb, var(--bg-3) 70%, var(--content) 12%); }
 
   /* Button - tertiary by default, 8px radius, 14px/500, no border */
-  .btn {
-    border: 0; background: var(--bg-3); color: var(--content);
-    padding: 0 var(--s600); height: var(--s1000); line-height: 40px;
-    border-radius: var(--r-button); cursor: pointer;
-    font-size: 14px; font-weight: 500; letter-spacing: 0;
-    transition: background .15s ease, color .15s ease;
-  }
-  .btn:hover { background: color-mix(in srgb, var(--bg-3) 70%, var(--content) 12%); }
-  .btn:active { background: color-mix(in srgb, var(--bg-3) 55%, var(--content) 20%); }
   /* primary - the inverse fill Base uses for its main action */
-  .btn.primary { background: var(--content); color: var(--content-inverse); }
-  .btn.primary:hover { background: color-mix(in srgb, var(--content) 82%, var(--bg)); }
-  .btn.on { background: var(--content); color: var(--content-inverse); }
 
   main {
     display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0;
@@ -136,6 +205,132 @@
     min-height: 0; overflow-y: auto; overscroll-behavior: contain;
     scrollbar-width: thin;
   }
+
+
+  /* ==================================================================
+     Component library
+     Recreated from Base Web: the kinds, the states and the colour for
+     each state come from baseui's own button/input/checkbox tokens.
+     Nothing outside this block styles a control; call sites ask the
+     library for one.
+     ================================================================== */
+
+  /* ---- Button: primary | secondary | tertiary, + icon shape ---- */
+  .b-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    box-sizing: border-box; height: var(--ctl-h);
+    padding: 0 var(--btn-px); border: 0; border-radius: var(--r-button);
+    font-family: var(--sans); font-size: var(--btn-font); line-height: var(--btn-lh);
+    font-weight: 500; letter-spacing: 0; white-space: nowrap; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .b-btn--primary   { background: var(--btn-primary-fill);   color: var(--btn-primary-text); }
+  .b-btn--primary:hover  { background: var(--btn-primary-hover); }
+  .b-btn--primary:active { background: var(--btn-primary-active); }
+  .b-btn--secondary { background: var(--btn-secondary-fill); color: var(--btn-secondary-text); }
+  .b-btn--secondary:hover  { background: var(--btn-secondary-hover); }
+  .b-btn--secondary:active { background: var(--btn-secondary-active); }
+  .b-btn--tertiary  { background: var(--btn-tertiary-fill);  color: var(--btn-tertiary-text); }
+  .b-btn--tertiary:hover  { background: var(--btn-tertiary-hover); }
+  .b-btn--tertiary:active { background: var(--btn-tertiary-active); }
+  .b-btn--icon { width: var(--ctl-h); padding: 0; }
+  .b-btn[aria-pressed="true"] { background: var(--btn-primary-fill); color: var(--btn-primary-text); }
+  .b-btn:disabled, .b-btn[aria-disabled="true"] {
+    background: var(--disabled-bg); color: var(--disabled-fg); cursor: not-allowed;
+  }
+  .b-btn:focus-visible { outline: 3px solid var(--border-selected); outline-offset: 2px; }
+
+  /* ---- Input: a filled box that turns to the active fill on focus ---- */
+  .b-input, .b-select, .b-inputgroup {
+    box-sizing: border-box; height: var(--ctl-h);
+    padding: 0 var(--in-px);
+    background: var(--input-fill); color: var(--content);
+    border: var(--in-border) solid var(--input-fill); border-radius: var(--r-input);
+    font-family: var(--sans); font-size: var(--in-font); line-height: var(--in-lh);
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .b-input:hover, .b-select:hover, .b-inputgroup:hover { border-color: var(--border-selected); }
+  .b-input:focus, .b-select:focus { outline: none;
+    background: var(--input-fill-active); border-color: var(--border-selected); }
+  .b-inputgroup:focus-within { background: var(--input-fill-active); border-color: var(--border-selected); }
+  .b-input::placeholder { color: var(--input-placeholder); }
+  .b-input:disabled { color: var(--disabled-fg); cursor: not-allowed; }
+  .b-input--mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .b-select { cursor: pointer; }
+  /* a control fills the field it is the only thing in; inside a row the row
+     decides, which is why width is not part of the component itself */
+  .field > .b-input, .field > .b-select, .field > .b-inputgroup,
+  .prop > .b-input, .prop > .b-select, .prop > .b-inputgroup { width: 100%; }
+
+  /* an input that carries a unit and a stepper beside the value */
+  .b-inputgroup { display: flex; align-items: center; gap: var(--s200);
+                  padding: 0 var(--s200) 0 var(--in-px); min-width: 0; }
+  .b-inputgroup > input {
+    flex: 1 1 0; min-width: 0; width: 100%; height: 100%; padding: 0;
+    background: none; border: 0; outline: none; color: inherit;
+    font: inherit; font-variant-numeric: tabular-nums;
+  }
+  .b-inputgroup__unit { flex: 0 0 auto; color: var(--content-3); font-size: var(--font-xs); }
+  .b-stepper { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; }
+  .b-stepper button {
+    width: 16px; height: 12px; padding: 0; border: 0; background: none;
+    cursor: pointer; color: var(--content-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .b-stepper button:hover { color: var(--content); }
+
+  /* ---- Segmented control: a tertiary track, selected segment inverts ---- */
+  .b-seg {
+    display: flex; box-sizing: border-box; height: var(--ctl-h);
+    padding: 2px; gap: 0; background: var(--bg-3); border-radius: var(--r-button);
+  }
+  .b-seg__btn {
+    flex: 1 1 0; border: 0; background: none; cursor: pointer; white-space: nowrap;
+    padding: 0 var(--btn-px); border-radius: calc(var(--r-button) - 2px);
+    font-family: var(--sans); font-size: var(--btn-font); font-weight: 500;
+    color: var(--content-2); transition: background-color .15s ease, color .15s ease;
+  }
+  .b-seg__btn:hover { color: var(--content); }
+  .b-seg__btn[aria-pressed="true"] { background: var(--bg); color: var(--content); }
+
+  /* ---- Tab: navigation, so it is not a Base control - but it is declared
+       here with the rest rather than invented at the call site ---- */
+  .b-tab {
+    border: 0; background: none; cursor: pointer; white-space: nowrap;
+    height: calc(var(--ctl-h) + 12px); padding: 0 var(--btn-px);
+    font-family: var(--sans); font-size: var(--btn-font); font-weight: 500;
+    color: var(--content-3); border-radius: 0;
+    box-shadow: inset 0 -5px 0 0 transparent;
+    transition: color .15s ease, box-shadow .15s ease;
+  }
+  .b-tab:hover { color: var(--content); }
+  .b-tab--on { color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
+
+  /* ---- Checkbox: Base's tick, square, with its own state ramp ---- */
+  .b-check { display: inline-flex; align-items: center; gap: var(--s300); cursor: pointer; }
+  .b-check input {
+    -webkit-appearance: none; appearance: none; margin: 0; flex: 0 0 auto;
+    width: var(--tick-size); height: var(--tick-size); border-radius: var(--r-check);
+    background: var(--tick-fill); border: 2px solid var(--tick-border);
+    cursor: pointer; display: grid; place-content: center;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .b-check input:hover { background: var(--tick-fill-hover); }
+  .b-check input:active { background: var(--tick-fill-active); }
+  .b-check input:checked {
+    background: var(--tick-fill-selected); border-color: var(--tick-fill-selected);
+  }
+  .b-check input:checked:hover {
+    background: var(--tick-fill-selected-hover); border-color: var(--tick-fill-selected-hover);
+  }
+  .b-check input::before {
+    content: ""; width: 12px; height: 12px; transform: scale(0);
+    transition: transform .12s ease; background: var(--tick-mark);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 85% 0, 43% 71%);
+  }
+  .b-check input:checked::before { transform: scale(1); }
+  .b-check input:disabled { background: var(--disabled-bg); border-color: var(--disabled-bg); }
+
   /* Accordion - each group is a card on the rail's ground, headed by a 44px
      row that carries a plus when it is shut and a minus when it is open. */
   details.group {
@@ -181,19 +376,6 @@
     cursor: ew-resize; user-select: none; touch-action: none; white-space: nowrap;
   }
   .prop > label:hover { color: var(--content); }
-  .numshell {
-    display: flex; align-items: center; gap: var(--s200);
-    height: 40px; padding: 0 var(--s200) 0 var(--s400); min-width: 0;
-    background: var(--bg-3); border: 2px solid transparent; border-radius: var(--r-input);
-  }
-  .numshell:hover { border-color: var(--border); }
-  .numshell:focus-within { border-color: var(--border-selected); }
-  .numshell input.num {
-    flex: 1 1 0; min-width: 0; width: 100%; height: 100%; padding: 0;
-    background: none; color: var(--content); border: 0; outline: none;
-    font-size: 15px; font-variant-numeric: tabular-nums;
-  }
-  .numshell .unit { flex: 0 0 auto; font-size: 13px; color: var(--content-2); }
   .step { flex: 0 0 auto; display: flex; flex-direction: column; }
   .step { gap: 2px; }
   .step button {
@@ -203,35 +385,10 @@
   .step button:hover { color: var(--content); }
 
   /* Segmented control - a tertiary track with an inverse selected segment */
-  .seg {
-    display: flex; background: var(--bg-3);
-    border-radius: var(--r-button); padding: 2px; gap: 0;
-  }
-  .seg button {
-    flex: 1 1 0; border: 0; background: none; padding: 0 var(--s500); height: 36px; cursor: pointer;
-    white-space: nowrap; font-size: 14px; font-weight: 500; color: var(--content-2);
-    border-radius: var(--r-mini); transition: background .15s ease, color .15s ease;
-  }
   .seg button:hover { color: var(--content); }
 
   /* the font pickers were bare <select>s wearing whatever the browser gave them */
-  .pathin {
-    flex: 1 1 0; min-width: 0; height: 36px; padding: 0 var(--s300);
-    font-family: var(--mono); font-size: 11.5px;
-    background: var(--bg-3); color: var(--content);
-    border: 2px solid transparent; border-radius: var(--r-input);
-  }
-  .pathin:hover { border-color: var(--border); }
-  .pathin:focus { outline: none; border-color: var(--border-selected); }
 
-  .rail select:not(.preset) {
-    height: 40px; width: 100%; padding: 0 var(--s400);
-    background: var(--bg-3); color: var(--content);
-    border: 2px solid transparent; border-radius: var(--r-input);
-    font-size: 13px; cursor: pointer;
-  }
-  .rail select:not(.preset):hover { border-color: var(--border); }
-  .rail select:not(.preset):focus { outline: none; border-color: var(--border-selected); }
   .seg button[aria-pressed="true"] { background: var(--bg); color: var(--content); }
   .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
 
@@ -246,53 +403,26 @@
   .field .hint, .fields > .hint { grid-column: 1 / -1; font-size: 12px; line-height: 17px; color: var(--content-2); margin-top: 0; }
   .field .row { display: flex; align-items: center; gap: var(--s200); }
   /* Input - filled, borderless until focus, then a 2px selected border */
-  input[type="color"] {
-    flex: 0 0 38px; width: 38px; height: 32px; padding: 2px; cursor: pointer;
-    background: var(--bg-3); border: 2px solid transparent; border-radius: var(--r-mini);
-  }
-  input[type="color"]:hover { border-color: var(--border); }
-  input[type="text"].hex {
-    height: 32px; font-family: var(--mono); font-size: 13px; text-transform: uppercase;
-    padding: 0 var(--s300); background: var(--bg-3); color: var(--content);
-    border: 2px solid transparent; border-radius: var(--r-mini);
-    transition: border-color .15s ease, background .15s ease;
-  }
-  input[type="text"].hex:hover { border-color: var(--border); }
-  input[type="text"].hex:focus { outline: none; border-color: var(--border-selected); }
 
   .field.colour { gap: var(--s100); }
   .field.colour .row { width: 100%; min-width: 0; }
-  .field.colour input[type="text"].hex { flex: 1 1 0; width: auto; min-width: 0; }
-  .field.colour input.alpha {
-    flex: 0 0 46px; min-width: 0; height: 32px; padding: 0 var(--s200); text-align: right;
-    background: var(--bg-3); color: var(--content-2); border: 2px solid transparent;
-    border-radius: var(--r-mini); font-size: 12px; font-variant-numeric: tabular-nums;
+  .field.colour .row > .b-input.hex { flex: 1 1 0; width: auto; min-width: 0; }
+  .field.colour .row > .b-input.alpha { flex: 0 0 64px; width: 64px; text-align: right; }
+  .field.colour .row > input[type="color"] {
+    flex: 0 0 var(--ctl-h); width: var(--ctl-h); height: var(--ctl-h);
+    padding: 3px; box-sizing: border-box; cursor: pointer;
+    background: var(--input-fill); border: var(--in-border) solid var(--input-fill);
+    border-radius: var(--r-input);
   }
-  .field.colour input.alpha:focus { outline: none; border-color: var(--border-selected); color: var(--content); }
+  .field.colour .row > input[type="color"]:hover { border-color: var(--border-selected); }
   /* Checkbox - square, as Base sets checkboxBorderRadius to 0 */
   .field.bool {
     display: grid; grid-template-columns: 1fr auto; align-items: center;
     column-gap: var(--s500); row-gap: var(--s100);
   }
   .field.bool > label { grid-column: 1; }
-  .field.bool > .switch { grid-column: 2; }
+  .field.bool > .b-check { grid-column: 2; }
   .field.bool > .hint { grid-column: 1 / -1; }
-  .switch { display: inline-flex; align-items: center; gap: var(--s300); cursor: pointer; }
-  .switch input {
-    -webkit-appearance: none; appearance: none; margin: 0;
-    width: 20px; height: 20px; border-radius: var(--r-check);
-    background: var(--bg-3); border: 2px solid transparent; cursor: pointer;
-    display: grid; place-content: center; transition: background .15s ease, border-color .15s ease;
-  }
-  .switch input:hover { border-color: var(--border); }
-  .switch input::before {
-    content: ""; width: 12px; height: 12px; transform: scale(0);
-    transition: transform .12s ease;
-    background: var(--content-inverse);
-    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 85% 0, 43% 71%);
-  }
-  .switch input:checked { background: var(--content); border-color: var(--content); }
-  .switch input:checked::before { transform: scale(1); }
 
   /* ---------- stage ---------- */
   /* anything the theme positions can be dragged straight on the preview */
@@ -319,12 +449,6 @@
     flex: 0 0 auto; align-self: center;
     display: flex; flex-direction: column; align-items: center; gap: var(--s300);
   }
-  .zoom .zbtn {
-    width: 32px; height: 32px; padding: 0; cursor: pointer;
-    background: var(--bg-3); border: 2px solid transparent; border-radius: var(--r-input);
-    display: grid; place-content: center;
-  }
-  .zoom .zbtn:hover { border-color: var(--border); }
   .zoom .zbtn:disabled { opacity: .4; cursor: default; }
   .zoom .zbtn::before {
     content: ""; display: block; width: 12px; height: 12px;
@@ -340,15 +464,8 @@
   }
   .tabs { display: flex; gap: 0; flex-wrap: wrap; justify-content: center; border-bottom: 1px solid var(--border); width: 100%; }
   .engine { display: flex; justify-content: center; }
-  .engine .seg { display: inline-flex; }
-  .engine .seg button { flex: 0 0 auto; }
-  .tabs .btn {
-    background: none; border-radius: 0; height: 48px; line-height: 48px; color: var(--content-3);
-    box-shadow: inset 0 -5px 0 0 transparent;
-    transition: color .15s ease, box-shadow .15s ease, background .15s ease;
-  }
-  .tabs .btn:hover { background: var(--bg-2); color: var(--content); }
-  .tabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
+  .engine .b-seg { display: inline-flex; }
+  .engine .b-seg__btn { flex: 0 0 auto; }
   .console {
     position: relative; width: 730px; height: 1056px;
     transform-origin: top left;
@@ -357,12 +474,12 @@
      and the d-pad, action cluster and menu button as the file's own vectors. */
   .console .shell { position: absolute; inset: 0; pointer-events: none; }
   .shell .body {
-    position: absolute; inset: 0; background: #292929;
+    position: absolute; inset: 0; background: var(--device-body);
     border-radius: 18px 18px 128px 20px;
   }
   .shell .bezel {
     position: absolute; left: 9px; top: 9px; width: 712px; height: 552px;
-    background: rgba(0, 0, 0, .4); border-radius: 8px;
+    background: var(--device-bezel); border-radius: 8px;
   }
   .shell img { position: absolute; display: block; }
   .shell .speaker {
@@ -471,13 +588,11 @@
       content: ""; display: block; width: 42px; height: 4px; margin: 0 auto;
       border-radius: 2px; background: var(--content-3); opacity: .5;
     }
-    .export { max-width: none; padding: 0 18px 20px; }
-    pre.xml { max-height: 40vh; }
     header.bar { padding: 10px 14px; gap: 10px; }
     .brand h1 { font-size: 15px; }
     .brand span { display: none; }
     .presets { gap: 4px; }
-    .presets .btn { padding: 5px 8px; font-size: 11.5px; }
+    .presets .btn { padding: 0 var(--s300); font-size: 12px; }
   }
 
 </style>
@@ -493,7 +608,7 @@
 
 <main>
   <aside class="rail" id="rail">
-    <button class="grabber" id="grabber" aria-label="Show or hide the controls"></button>
+    <button class="grabber" id="grabber" type="button" aria-label="Show or hide the controls"></button>
     <div id="railbody"></div>
   </aside>
 
@@ -520,9 +635,9 @@
     </div>
     </div>
     <div class="zoom" id="zoom">
-      <button class="zbtn" id="zoomin" type="button" aria-label="Zoom in"></button>
+      <button class="b-btn b-btn--secondary b-btn--icon zbtn" id="zoomin" type="button" aria-label="Zoom in"></button>
       <span class="zval" id="zoomval">100%</span>
-      <button class="zbtn minus" id="zoomout" type="button" aria-label="Zoom out"></button>
+      <button class="b-btn b-btn--secondary b-btn--icon zbtn minus" id="zoomout" type="button" aria-label="Zoom out"></button>
     </div>
     </div>
     <div class="legend" id="legend"></div>
@@ -530,15 +645,15 @@
     </section>
 </main>
 
-<button class="btn primary" id="zip">Download .zip</button>
+<button class="b-btn b-btn--primary" id="zip" type="button">Download .zip</button>
 
 <dialog class="sheetbox wide" id="xmlbox">
   <div class="head">
     <h2>theme.xml</h2>
-    <button class="btn" id="copy">Copy</button>
-    <button class="btn" id="download">theme.xml</button>
-    <button class="btn" id="about">How this works</button>
-    <button class="btn" id="xmlclose" aria-label="Close">Close</button>
+    <button class="b-btn b-btn--secondary" id="copy" type="button">Copy</button>
+    <button class="b-btn b-btn--secondary" id="download" type="button">theme.xml</button>
+    <button class="b-btn b-btn--secondary" id="about" type="button">How this works</button>
+    <button class="b-btn b-btn--tertiary" id="xmlclose" type="button" aria-label="Close">Close</button>
   </div>
   <pre class="xml" id="xml"></pre>
 </dialog>
@@ -546,7 +661,7 @@
 <dialog class="sheetbox" id="aboutbox">
   <div class="head">
     <h2>How this works</h2>
-    <button class="btn" id="aboutclose" aria-label="Close">Close</button>
+    <button class="b-btn b-btn--tertiary" id="aboutclose" type="button" aria-label="Close">Close</button>
   </div>
   <div class="note">
         <b>Download .zip</b> gives you a complete theme folder — this
@@ -989,6 +1104,121 @@
     if (text != null) n.textContent = text;
     return n;
   }
+
+  // ==================================================================
+  // Component library
+  // Every control in the tool is built here. If a control is needed and
+  // it is not in this object, it gets added here first and used from
+  // here -- nothing downstream hand-rolls its own markup or classes.
+  // Sizes follow Base: the CSS switches compact/default on the viewport.
+  // ==================================================================
+  var UI = {
+    button: function (o) {
+      o = o || {};
+      var b = el("button", null, o.label || "");
+      b.type = "button";
+      b.className = "b-btn b-btn--" + (o.kind || "secondary") + (o.icon ? " b-btn--icon" : "");
+      if (o.title) b.title = o.title;
+      if (o.ariaLabel) b.setAttribute("aria-label", o.ariaLabel);
+      if (o.pressed != null) b.setAttribute("aria-pressed", o.pressed ? "true" : "false");
+      if (o.disabled) b.disabled = true;
+      if (o.html) b.innerHTML = o.html;
+      if (o.onClick) b.addEventListener("click", o.onClick);
+      return b;
+    },
+
+    // a button that opens a file picker; same look, <label> underneath
+    fileButton: function (o) {
+      var l = el("label", null, o.label || "");
+      l.className = "b-btn b-btn--" + (o.kind || "secondary");
+      l.style.cursor = "pointer";
+      var i = el("input"); i.type = "file"; i.style.display = "none";
+      if (o.accept) i.accept = o.accept;
+      if (o.multiple) i.multiple = true;
+      if (o.directory) { try { i.webkitdirectory = true; } catch (e) {} }
+      i.addEventListener("change", function () { if (i.files && i.files.length) o.onFiles(i.files); });
+      l.appendChild(i);
+      return l;
+    },
+
+    input: function (o) {
+      o = o || {};
+      var i = el("input");
+      i.type = o.type || "text";
+      i.className = "b-input" + (o.mono ? " b-input--mono" : "") + (o.cls ? " " + o.cls : "");
+      if (o.value != null) i.value = o.value;
+      if (o.placeholder) i.placeholder = o.placeholder;
+      if (o.align) i.style.textAlign = o.align;
+      if (o.onInput) i.addEventListener("input", function () { o.onInput(i.value, i); });
+      if (o.onChange) i.addEventListener("change", function () { o.onChange(i.value, i); });
+      return i;
+    },
+
+    // an input with a unit and an up/down stepper inside the same box
+    inputGroup: function (o) {
+      var wrap = el("div"); wrap.className = "b-inputgroup";
+      var i = el("input");
+      i.className = ""; i.type = "text";
+      if (o.value != null) i.value = o.value;
+      i.setAttribute("inputmode", "decimal");
+      wrap.appendChild(i);
+      if (o.unit) { var u = el("span", null, o.unit); u.className = "b-inputgroup__unit"; wrap.appendChild(u); }
+      if (o.onStep) {
+        var st = el("div"); st.className = "b-stepper";
+        [[1, "M1 4.5 L4 1.5 L7 4.5"], [-1, "M1 1.5 L4 4.5 L7 1.5"]].forEach(function (d) {
+          var b = el("button"); b.type = "button";
+          b.innerHTML = '<svg viewBox="0 0 8 6" width="8" height="6" aria-hidden="true">'
+            + '<path d="' + d[1] + '" fill="none" stroke="currentColor" stroke-width="1.3"'
+            + ' stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          b.setAttribute("aria-label", (d[0] > 0 ? "Increase " : "Decrease ") + (o.label || "value"));
+          b.addEventListener("click", function () { o.onStep(d[0]); });
+          st.appendChild(b);
+        });
+        wrap.appendChild(st);
+      }
+      return { root: wrap, input: i };
+    },
+
+    select: function (o) {
+      var sel = el("select");
+      sel.className = "b-select" + (o && o.cls ? " " + o.cls : "");
+      (o.options || []).forEach(function (op) {
+        var v = typeof op === "string" ? op : op.value;
+        var t = typeof op === "string" ? op : (op.label != null ? op.label : op.value);
+        var n = el("option", null, t); n.value = v;
+        sel.appendChild(n);
+      });
+      if (o.value != null) sel.value = o.value;
+      if (o.onChange) sel.addEventListener("change", function () { o.onChange(sel.value, sel); });
+      return sel;
+    },
+
+    segmented: function (o) {
+      var box = el("div"); box.className = "b-seg" + (o.cls ? " " + o.cls : "");
+      (o.options || []).forEach(function (op) {
+        var v = typeof op === "string" ? op : op.value;
+        var t = typeof op === "string" ? op : op.label;
+        var b = el("button", null, t); b.type = "button";
+        b.className = "b-seg__btn";
+        b.setAttribute("aria-pressed", v === o.value ? "true" : "false");
+        b.addEventListener("click", function () { if (o.onChange) o.onChange(v); });
+        box.appendChild(b);
+      });
+      return box;
+    },
+
+    checkbox: function (o) {
+      var l = el("label"); l.className = "b-check";
+      var i = el("input"); i.type = "checkbox";
+      if (o.checked) i.checked = true;
+      if (o.disabled) i.disabled = true;
+      if (o.onChange) i.addEventListener("change", function () { o.onChange(i.checked, i); });
+      l.appendChild(i);
+      if (o.label) l.appendChild(el("span", null, o.label));
+      return l;
+    }
+  };
+
   var canvas = document.createElement("canvas");
   var ctx = canvas.getContext("2d");
 
@@ -3526,7 +3756,7 @@
   function numProp(fd) {
     var row = el("div"); row.className = "prop";
     var lab = el("label", null, fd.label);
-    var shell = el("div"); shell.className = "numshell";
+    var shell = el("div"); shell.className = "b-inputgroup numshell";
     var inp = el("input"); inp.className = "num"; inp.type = "text"; inp.size = 6;
     inp.title = fd.label + " \u2014 " + fd.min + " to " + fd.max + (fd.unit || "") + ", drag the label to scrub";
 
@@ -3561,8 +3791,8 @@
     });
 
     // the unit belongs to the field, not the typed value
-    if (fd.unit) shell.appendChild(el("span", null, fd.unit)).className = "unit";
-    var step = el("div"); step.className = "step";
+    if (fd.unit) shell.appendChild(el("span", null, fd.unit)).className = "b-inputgroup__unit";
+    var step = el("div"); step.className = "b-stepper";
     [[1, "M1 4.5 L4 1.5 L7 4.5"], [-1, "M1 1.5 L4 4.5 L7 1.5"]].forEach(function (d) {
       var b = el("button");
       b.innerHTML = '<svg viewBox="0 0 8 6" width="8" height="6" aria-hidden="true">'
@@ -3601,14 +3831,11 @@
       // a segmented control never fits beside its label at rail width
       wrap.className = "field choice-wide";
       wrap.appendChild(el("label", null, fd.label));
-      var seg = el("div"); seg.className = "seg";
-      fd.choices.forEach(function (c) {
-        var b = el("button", null, c[1]);
-        b.setAttribute("aria-pressed", S[fd.k] === c[0] ? "true" : "false");
-        b.addEventListener("click", function () { S[fd.k] = c[0]; buildRail(); render(); });
-        seg.appendChild(b);
-      });
-      wrap.appendChild(seg);
+      wrap.appendChild(UI.segmented({
+        value: S[fd.k],
+        options: fd.choices.map(function (c) { return { value: c[0], label: c[1] }; }),
+        onChange: function (v) { S[fd.k] = v; buildRail(); render(); }
+      }));
       if (fd.hint) { var ch = el("div", null, fd.hint); ch.className = "hint"; wrap.appendChild(ch); }
       return wrap;
     }
@@ -3616,7 +3843,7 @@
       wrap.className = "field";
       wrap.appendChild(el("label", null, fd.label));
       var sel = document.createElement("select");
-      sel.className = "fontpick";
+      sel.className = "b-select fontpick";
       FONT_LIB.forEach(function (e) {
         var o = document.createElement("option");
         o.value = e.id; o.textContent = e.label;
@@ -3637,7 +3864,7 @@
         row.appendChild(tag);
         list.appendChild(row);
       });
-      var pickF = el("label"); pickF.className = "btn"; pickF.style.cssText = "cursor:pointer;margin-top:6px;text-align:center;";
+      var pickF = el("label"); pickF.className = "b-btn b-btn--secondary"; pickF.style.cssText = "cursor:pointer;margin-top:6px;text-align:center;";
       pickF.textContent = "Load a font file…";
       var fin = el("input"); fin.type = "file"; fin.accept = ".ttf,.otf,font/ttf,font/otf"; fin.style.display = "none";
       fin.addEventListener("change", function () {
@@ -3662,7 +3889,7 @@
       status.className = "val";
       top0.appendChild(status);
       var row0 = el("div"); row0.className = "row"; row0.style.gap = "6px";
-      var pick = el("label"); pick.className = "btn"; pick.style.cursor = "pointer";
+      var pick = el("label"); pick.className = "b-btn b-btn--secondary"; pick.style.cursor = "pointer";
       pick.textContent = "Load…";
       var fi = el("input"); fi.type = "file"; fi.accept = ".svg,.png,image/svg+xml,image/png";
       fi.style.display = "none";
@@ -3679,7 +3906,7 @@
         rd.readAsDataURL(file);
       });
       pick.appendChild(fi);
-      var clear = el("button", null, "Reset"); clear.className = "btn";
+      var clear = UI.button({ label: "Reset" });
       clear.style.display = ART[fd.k] ? "" : "none";
       clear.addEventListener("click", function () {
         delete ART[fd.k]; status.textContent = "default"; clear.style.display = "none"; render();
@@ -3687,7 +3914,7 @@
       var isSample = ICONS.filter(function (i) { return i.k === fd.k; })[0].noPath;
       var pathIn = el("input"); pathIn.type = "text"; pathIn.value = PATHS[fd.k];
       if (isSample) pathIn.style.display = "none";
-      pathIn.className = "pathin";
+      pathIn.className = "b-input b-input--mono pathin";
       pathIn.addEventListener("change", function () { PATHS[fd.k] = pathIn.value.trim() || PATHS[fd.k]; renderXML(); });
       row0.appendChild(pick); row0.appendChild(clear);
       wrap.appendChild(top0); wrap.appendChild(row0);
@@ -3709,7 +3936,7 @@
         return S[fd.k] + (h.length < 2 ? "0" + h : h);
       }
       var sw = el("input"); sw.type = "color"; sw.value = S[fd.k];
-      var tx = el("input"); tx.type = "text"; tx.className = "hex"; tx.size = 9; tx.value = shown();
+      var tx = el("input"); tx.type = "text"; tx.className = "b-input b-input--mono hex"; tx.size = 9; tx.value = shown();
       tx.title = "Paste a colour as RGB, RRGGBB or RRGGBBAA - the alpha byte sets the opacity below.";
       sw.addEventListener("input", function () { S[fd.k] = sw.value.toUpperCase(); tx.value = shown(); render(); });
       tx.addEventListener("change", function () {
@@ -3727,7 +3954,7 @@
       row.appendChild(sw); row.appendChild(tx); wrap.appendChild(row);
       // opacity belongs to the colour, so it sits on the same row
       if (S[fd.k + "A"] != null) {
-        var av = el("input"); av.className = "alpha"; av.type = "text"; av.size = 4;
+        var av = el("input"); av.className = "b-input b-input--mono alpha"; av.type = "text"; av.size = 4;
         av.value = S[fd.k + "A"] + "%";
         av.title = "Opacity — the alpha byte of the colour";
         function setA(v) {
@@ -3746,7 +3973,7 @@
     } else if (fd.t === "bool") {
       wrap.classList.add("bool");
       var lab = el("label", null, fd.label);
-      var sw2 = el("label"); sw2.className = "switch";
+      var sw2 = el("label"); sw2.className = "b-check";
       var cb = el("input"); cb.type = "checkbox"; cb.checked = !!S[fd.k];
       cb.addEventListener("change", function () { S[fd.k] = cb.checked; render(); });
       sw2.appendChild(cb);
@@ -3766,25 +3993,27 @@
   function buildTabs() {
     var tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
+    function tab(label, on, onClick) {
+      var b = el("button", null, label);
+      b.type = "button";
+      b.className = "b-tab" + (on ? " b-tab--on" : "");
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.addEventListener("click", onClick);
+      tabs.appendChild(b);
+    }
     // General is a tab of its own, ahead of the screens; picking it leaves the
     // preview on whatever screen you were looking at.
-    var gen = el("button", null, "General");
-    gen.className = "btn" + (railMode === "general" ? " on" : "");
-    gen.addEventListener("click", function () {
+    tab("General", railMode === "general", function () {
       railMode = "general"; buildTabs(); buildRail();
     });
-    tabs.appendChild(gen);
     [["carousel", "Carousel"], ["gamelist", "Gamelist"], ["menu", "Menu"],
      ["keyboard", "Keyboard"], ["saver", "Screensaver"], ["popup", "Pop-up"]].forEach(function (t) {
-      var b = el("button", null, t[1]);
-      b.className = "btn" + (railMode !== "general" && page === t[0] ? " on" : "");
-      b.addEventListener("click", function () {
+      tab(t[1], railMode !== "general" && page === t[0], function () {
         page = t[0]; railMode = "screen"; buildTabs(); buildRail(); render();
       });
-      tabs.appendChild(b);
     });
-    return;
   }
+
 
   function move(d) {
     if (page === "carousel") cursor = Math.min(Math.max(cursor + d, 0), sysList().length - 1);
@@ -3883,13 +4112,12 @@
     var box = document.getElementById("presets");
     box.innerHTML = "";
     // six themes no longer fit as buttons, and they are a single choice anyway
-    var sel = el("select"); sel.className = "preset";
-    sel.setAttribute("aria-label", "Theme preset");
-    Object.keys(PRESETS).forEach(function (name) {
-      var o = el("option", null, name); o.value = name; sel.appendChild(o);
+    var sel = UI.select({
+      options: Object.keys(PRESETS),
+      value: currentPreset,
+      onChange: function (v) { loadPreset(v); }
     });
-    sel.value = currentPreset;
-    sel.addEventListener("change", function () { loadPreset(sel.value); });
+    sel.classList.add("preset");
     box.appendChild(sel);
   }
 
@@ -3958,45 +4186,37 @@
   function buildEngine() {
     var box = document.getElementById("engine");
     box.innerHTML = "";
-    var seg = el("div"); seg.className = "seg";
-    [["stock", "Stock ES"], ["custom", "This build"]].forEach(function (m) {
-      var b = el("button", null, m[1]);
-      b.setAttribute("aria-pressed", S.engine === m[0] ? "true" : "false");
-      b.title = m[0] === "stock"
-        ? "Preview and export for stock EmulationStation"
-        : "Preview and export for the R36S Enhanced build";
-      b.addEventListener("click", function () {
-        applyEngine(m[0]); buildEngine(); buildRail(); render();
-        toast(m[0] === "stock" ? "Previewing as stock EmulationStation" : "Previewing as the R36S Enhanced build");
-      });
-      seg.appendChild(b);
-    });
-    box.appendChild(seg);
+    box.appendChild(UI.segmented({
+      cls: "engine-seg",
+      value: S.engine,
+      options: [{ value: "stock", label: "Stock ES" }, { value: "custom", label: "This build" }],
+      onChange: function (v) {
+        applyEngine(v); buildEngine(); buildRail(); render();
+        toast(v === "stock" ? "Previewing as stock EmulationStation"
+                            : "Previewing as the R36S Enhanced build");
+      }
+    }));
   }
+
 
   function buildIO() {
     var box = document.getElementById("io");
     box.innerHTML = "";
-    var zl = el("label"); zl.className = "btn"; zl.style.cursor = "pointer"; zl.textContent = "Import .zip";
-    var zi = el("input"); zi.type = "file"; zi.accept = ".zip,application/zip"; zi.style.display = "none";
-    zi.addEventListener("change", function () { if (zi.files[0]) openZip(zi.files[0]); });
-    zl.appendChild(zi);
-
-    var fl = el("label"); fl.className = "btn"; fl.style.cursor = "pointer"; fl.textContent = "Import folder";
-    var fi = el("input"); fi.type = "file"; fi.multiple = true; fi.style.display = "none";
-    try { fi.webkitdirectory = true; } catch (e) {}
-    fi.addEventListener("change", function () { if (fi.files.length) openThemeFiles(collectFiles(fi.files)); });
-    fl.appendChild(fi);
-
-    box.appendChild(zl); box.appendChild(fl);
-    var xmlBtn = el("button", null, "theme.xml");
-    xmlBtn.className = "btn"; xmlBtn.type = "button";
-    xmlBtn.addEventListener("click", function () { openDlg(xmlBox); });
-    box.appendChild(xmlBtn);
-    // moved, not rebuilt, so the handler bound to it stays bound
+    box.appendChild(UI.fileButton({
+      label: "Import .zip", accept: ".zip,application/zip",
+      onFiles: function (f) { openZip(f[0]); }
+    }));
+    box.appendChild(UI.fileButton({
+      label: "Import folder", multiple: true, directory: true,
+      onFiles: function (f) { openThemeFiles(collectFiles(f)); }
+    }));
+    box.appendChild(UI.button({
+      label: "theme.xml", onClick: function () { openDlg(xmlBox); }
+    }));
     var zip = document.getElementById("zip");
     if (zip) { zip.hidden = false; box.appendChild(zip); }
   }
+
 
   function downloadZip() {
     var enc = new TextEncoder();
