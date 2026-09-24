@@ -487,7 +487,7 @@
     glTop: 48, glLeft: 0, glWidth: 640, glFont: 32, glPitch: 53, glPillH: 52,
     glRadius: 0, glFit: false, glInset: 20, glHeader: 20,
     helpShow: true, helpFont: 21, helpIcon: 32, helpPadX: 10, helpPadY: 6, helpMargin: 24,
-    pillGrad: true, pillEnd: "#1257C9", kbKey: "#D8D8D8"
+    pillGrad: true, pillEnd: "#1257C9", kbKey: "#E0E0E0"
   };
 
   // Keyboard / screensaver / pop-up values are shared across the presets; the
@@ -529,7 +529,7 @@
     var p = PRESETS[name];
     for (var k in SHARED) if (!(k in p)) p[k] = SHARED[k];
     // the values the shipped themes actually set in <keyColor>
-    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#F5F5F5" : "#0A0A0A";
+    if (!("kbKey" in p)) p.kbKey = name.indexOf("Light") >= 0 ? "#FFFFFF" : "#0A0A0A";
     // each page paints its own fill; they start from the theme's base colour
     if (!("bgSys" in p)) p.bgSys = p.bg;
     if (!("bgGl" in p)) p.bgGl = p.bg;
