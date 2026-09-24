@@ -45,6 +45,12 @@ Y to reach the search keyboard, Select for the clock screensaver, Start for the
 menu, and the d-pad to move the selection. It navigates the way the device does,
 so you can walk a theme instead of inspecting it screen by screen.
 
+On the keyboard that goes all the way down to the keys: the d-pad walks them,
+A presses whichever one is focused, and pressing the shift key is what turns
+the shifted set on — the same gesture the device asks for, rather than a
+control off to the side. Wide keys own the cells they span, so the focus never
+lands in the middle of one.
+
 - **Drag to place** — anything the theme positions moves under the pointer:
   the clock, the battery, the carousel, the game list, the game-art box (with a
   corner handle to resize it), the game count, the hint bar, the keyboard grid.
