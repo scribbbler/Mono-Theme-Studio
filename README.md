@@ -28,8 +28,17 @@ or drag the label sideways to scrub. A colour, its hex and its opacity share one
 row, because on the device they are one value.
 
 The device around the screen is the Figma source rather than a sketch of it:
-its 730×1056 body, the bezel inset 9px, and the d-pad, action cluster and menu
-button as the file's own vectors, inlined so the page stays self-contained.
+its 730×1056 body, the bezel inset 9px, and the d-pad, action cluster, menu
+button, Select and Start bars and the speaker grille as the file's own vectors
+and geometry, inlined so the page stays self-contained. It is checked against a
+render of that file pixel by pixel, so the mock-up is the wireframe rather than
+an impression of it.
+
+The systems and games it previews with are real: the carousel lists the fifteen
+platforms of the [Tiny Best Set GO!](https://lewdev.github.io/apps/tiny-best-set-list/)
+curated collection, and opening one shows that system's own games under their
+full ROM names — region suffixes, revisions and all. Long names are what break a
+layout, so the preview uses the names a device actually has to fit.
 
 **Six screens**, each previewed live: carousel, gamelist, menu, on-screen
 keyboard, screensaver clock, and the volume/brightness pop-up. **The mockup's
@@ -203,5 +212,8 @@ metrics and can land a pixel out; check on the device before calling it final.
 
 The tool is MIT licensed. The three stand-in game images are downscaled
 screenshots of SNES titles, included as preview aids; they remain the property
-of their respective publishers and are not covered by the MIT grant. **BPreplay** is bundled for the preview and remains
+of their respective publishers and are not covered by the MIT grant. The system
+and game names come from the Tiny Best Set GO! list by Lewis Nakao, and the
+bundled system logos from the Onyx UI theme — both preview aids, under their
+own terms. **BPreplay** is bundled for the preview and remains
 under its own licence — it is not part of the MIT grant.
