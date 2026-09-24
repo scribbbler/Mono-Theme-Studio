@@ -529,6 +529,7 @@
   .hit { transition: background .12s ease; }
   .hit:hover { background: color-mix(in srgb, var(--accent) 22%, transparent) !important; }
   .hit:active { background: color-mix(in srgb, var(--accent) 40%, transparent) !important; }
+  .legend[hidden] { display: none; }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--content-3); text-align: center; }
   .legend b { color: var(--content); font-weight: 600; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -587,8 +588,7 @@
     .devicerow { display: block; flex: 0 0 auto; width: auto; }
     .devicewrap { display: block; flex: 0 0 auto; width: auto; overflow: visible; }
     .zoom { display: none; }
-    /* the readout would sit on top of the clipped shell, so lift it above */
-    .legend { font-size: 11px; order: -1; opacity: .9; }
+    .legend { font-size: 11px; }
 
     /* controls ride up from the bottom */
     :root { --peek: calc(76px + env(safe-area-inset-bottom, 0px)); }
@@ -3205,36 +3205,24 @@
       " (showing engine defaults)";
   }
 
+  // The readout used to repeat the rail: row pitch, pill width, nav mode.
+  // Those are all visible in the controls, so what is left is only what the
+  // rail cannot tell you - things about the theme that are wrong or absent.
+  // With nothing to report the strip is not rendered at all.
   function renderLegend() {
-    var pitch = S.carHeight / S.carRows;
-    var parts = page === "carousel"
-      ? ["row pitch <b>" + pitch.toFixed(1) + "px</b>",
-         "pill <b>" + (S.carFit ? "hugs text, max " + S.carPillW : S.carPillW) + "px</b>",
-         "nav <b>" + (S.listScroll ? "list-style" : "centered") + "</b>"]
-      : page === "gamelist"
-        ? ["row pitch <b>" + S.glPitch + "px</b>",
-           "pill <b>" + (S.glFit ? "hugs text, max " + S.glWidth : S.glWidth) + "px</b>",
-           "visible rows <b>" + Math.floor((SH - 48 - 60) / S.glPitch) + "</b>"]
-        : page === "menu"
-          ? ["row pitch <b>38px</b> (engine)", "pill <b>620px</b> (engine)", "font <b>23px</b> (engine)"]
-        : page === "keyboard"
-          ? ["grid <b>" + S.kbWidth + "px</b>", "key <b>" + (S.kbWidth / 13 - S.kbSpacing).toFixed(1) + "px</b>",
-             "flash <b>" + S.kbFlash + "ms</b>",
-             "<b>A</b> presses the focused key — on <b>shift</b> it holds the shifted set",
-             "shift is <b>" + (S.kbShift ? "on" : "off") + "</b>"]
-        : page === "saver"
-          ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
-          : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
-    // dragging is only discoverable if something says so
+    var box = document.getElementById("legend");
+    var parts = [];
     if (page === "carousel" && S.carLogos && !hasLogoArt())
       parts.push("<b>no logo art</b> — the box is drawn empty; load one, or import a theme that ships them");
     if (S.helpPosSet && (S.helpX >= SW || S.helpY >= SH || S.helpX < -SW || S.helpY < 0))
       parts.push("<b>hint bar is off-screen</b> — the theme places it at " +
         Math.round(S.helpX) + "," + Math.round(S.helpY) + ", so the device shows none of it");
-    if (page !== "menu" && page !== "popup" && page !== "saver")
-      parts.push("<b>drag</b> anything on the screen to place it");
-    document.getElementById("legend").innerHTML = parts.join(" · ") + themeNote();
+    var note = themeNote();
+    var html = parts.join(" · ") + note;
+    box.innerHTML = html;
+    box.hidden = !html;
   }
+
 
 
   // ---------- writing a zip ----------

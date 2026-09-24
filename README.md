@@ -55,8 +55,8 @@ lands in the middle of one.
   the clock, the battery, the carousel, the game list, the game-art box (with a
   corner handle to resize it), the game count, the hint bar, the keyboard grid.
   One pixel dragged is one pixel of the 640×480 screen whatever the mock-up is
-  scaled to, a readout names the properties as they change, and values still
-  stop at the same limits the sliders use. Works with touch.
+  scaled to, and values still stop at the same limits the controls use. Works
+  with touch.
 - **Background fills** — a colour per page, set on that page's own panel,
   instead of shipping a 640×480 image for each. The format has no
   "fill this view with a colour" element, so each page keeps the background image
