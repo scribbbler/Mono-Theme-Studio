@@ -522,6 +522,7 @@
     battRight: 20, battY: 8, battSize: 20, battGap: 6, battX: 0, battAlign: "right",
     logoTint: true, helpPillOn: true, stockFade: false, stockPrompts: false,
     logoScale: 1, stockBatteryFont: false, engine: "custom",
+    logoArt: "#FFFFFF", logoArtA: 100,
     helpPosSet: false, helpX: 0, helpY: 0, helpOx: 0, helpOy: 0,
     siShow: false, siSize: 16, siY: 404, siAlign: "center", siUpper: true,
     siColor: "#F7FBF7", siColorA: 70, fSI: "BPreplay-Regular.otf",
@@ -784,6 +785,7 @@
   var FILL_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC";
   var FILL_PATH = "./art/fill.png";
   var BG_TINT = {};        // per-slot <color> applied to background art
+  var SYS_LAYERS = [];     // other extras the system view stacks, in zIndex order
   var FRONT_EXTRAS = [];   // per-system extra art the theme draws over the carousel
   var FRONT_GEO = null;
   var SYSTEM_LOGOS = [];   // [{ id, src }] read from the theme's own system folders
@@ -864,6 +866,53 @@
     })).then(function (l) {
       l = l.filter(Boolean);
       return l.length ? { list: l, geo: geo } : null;
+    });
+  }
+
+  // A theme can stack any number of extras in the system view - Art Book washes
+  // the screen with black at 27% so its logo reads over the artwork. Collect
+  // them all so the preview stacks what the theme stacks.
+  function loadSysLayers(doc, files, baseDir, r) {
+    var all = r.all("system", "image", null), jobs = [], out = [];
+    all.forEach(function (elm) {
+      if (elm.getAttribute("extra") !== "true") return;
+      var name = elm.getAttribute("name") || "";
+      if (name === "background") return;                 // that is the page fill
+      var ps = elm.getElementsByTagName("path");
+      var ref = ps.length ? ps[ps.length - 1].textContent.trim() : "";
+      if (ref.indexOf("${system.theme}") >= 0) return;   // per-system art, handled apart
+
+      function pair(tag, dflt) {
+        var n = elm.getElementsByTagName(tag);
+        if (!n.length) return dflt;
+        var a = n[n.length - 1].textContent.trim().split(/\s+/).map(parseFloat);
+        return a.length >= 2 && a.every(isFinite) ? a : dflt;
+      }
+      var cN = elm.getElementsByTagName("color");
+      var tint = null;
+      if (cN.length) {
+        var v = cN[cN.length - 1].textContent.replace("#", "").trim();
+        if (/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(v))
+          tint = { css: "#" + v.slice(0, 6).toUpperCase(),
+                   a: v.length === 8 ? Math.round(parseInt(v.slice(6), 16) / 255 * 100) : 100 };
+      }
+      var zN = elm.getElementsByTagName("zIndex");
+      var z = zN.length ? parseFloat(zN[zN.length - 1].textContent) : 0;
+      var pos = pair("pos", [0, 0]), size = pair("size", [1, 1]);
+      var layer = {
+        x: pos[0] * SW, y: pos[1] * SH, w: size[0] * SW, h: size[1] * SH,
+        z: isFinite(z) ? z : 0, tint: tint, src: null
+      };
+      var path = resolve(files, baseDir, ref);
+      if (path) jobs.push(Promise.resolve(files[path]()).then(function (b) {
+        layer.src = bytesToDataURL(b, mimeOf(path));
+      }).catch(function () {}));
+      // a tinted layer with no art is still a flat wash
+      if (path || tint) out.push(layer);
+    });
+    return Promise.all(jobs).then(function () {
+      return out.filter(function (l) { return l.src || l.tint; })
+                .sort(function (a, b) { return a.z - b.z; });
     });
   }
 
@@ -1038,7 +1087,7 @@
   function applyDoc(doc, files, baseDir) {
     clamped = [];
     SYSTEM_LOGOS = []; SYSTEM_EXTRAS = []; EXTRA_GEO = null;
-    FRONT_EXTRAS = []; FRONT_GEO = null;
+    FRONT_EXTRAS = []; FRONT_GEO = null; SYS_LAYERS = [];
     resetArt(false);
     var r = makeReader(doc, baseDir);
     var jobs = [];
@@ -1139,6 +1188,11 @@
     col(r.colour("system", "text", "systemInfo", "color"), "siColor");
     useFont(r.prop("system", "text", "systemInfo", "fontPath"), "fSI");
     S.carLogos = !!r.el("system", "image", "logo");
+    // The logo element's own <color> multiplies the artwork in every state -
+    // Art Book dims its screenshots to ffffffcc so the logo above reads.
+    var logoCol = r.colour("system", "image", "logo", "color");
+    S.logoArt = logoCol ? logoCol.hex : "#FFFFFF";
+    S.logoArtA = logoCol ? logoCol.a : 100;
     useArt(r.prop("system", "image", "logo", "path"), "sysLogo");
     var lt = r.num("system", "text", "logoText", "fontSize");
     if (lt) setNum("carFont", lt * SH * BOOST);
@@ -1325,6 +1379,8 @@
         if (/^BPreplay/.test(S[k])) useFont(common, k);   // untouched by the lookups above
       });
     }
+
+    jobs.push(loadSysLayers(doc, files, baseDir, r).then(function (l) { SYS_LAYERS = l; }));
 
     jobs.push(loadPatternExtras(doc, files, baseDir, r).then(function (res) {
       if (res) { FRONT_EXTRAS = res.list; FRONT_GEO = res.geo; }
@@ -1703,6 +1759,29 @@
     scr.appendChild(im);
   }
 
+  // The engine's carousel sits at zIndex 40, so anything below that is behind
+  // the artwork and anything above washes over it.
+  function drawSysLayers(scr, front) {
+    SYS_LAYERS.forEach(function (l) {
+      if ((l.z > 40) !== !!front) return;
+      var style = { left: l.x + "px", top: l.y + "px", width: l.w + "px", height: l.h + "px" };
+      var node;
+      if (l.src) {
+        node = (l.tint && !isWhite(l.tint.css)) ? tinted(style, l.src, l.tint.css) : el("img", style);
+        if (!l.tint || isWhite(l.tint.css)) { node.src = l.src; node.alt = ""; node.style.objectFit = "fill"; }
+        else {
+          node.style.backgroundSize = "100% 100%";
+          if (node.firstChild) node.firstChild.style.webkitMaskSize = node.firstChild.style.maskSize = "100% 100%";
+        }
+      } else {
+        node = el("div", style);
+        node.style.background = l.tint.css;
+      }
+      if (l.tint && l.tint.a < 100) node.style.opacity = l.tint.a / 100;
+      scr.appendChild(node);
+    });
+  }
+
   function drawFrontExtra(scr) {
     if (!FRONT_EXTRAS.length || !FRONT_GEO) return;
     var names = sysList();
@@ -1777,8 +1856,8 @@
           width: S.carLogoW + "px", height: S.carLogoH + "px",
           webkitMaskPosition: "left center"
         }, perSys || ART.sysLogo.src,
-           S.logoTint ? (isSel ? css("pillText") : css("text")) : "#FFFFFF");
-        lg.style.opacity = fade;
+           S.logoTint ? (isSel ? css("pillText") : css("text")) : css("logoArt"));
+        lg.style.opacity = fade * (S.logoArtA / 100);
         if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = "left center"; }
         lg.style.backgroundPosition = "left center";
         scr.appendChild(grab(lg, { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
@@ -1818,7 +1897,7 @@
       if (S.carLogos && (perSys || ART.sysLogo)) {
         node = tinted({ left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px" },
           perSys || ART.sysLogo.src,
-          S.logoTint ? (isSel ? css("pillText") : css("text")) : "#FFFFFF");
+          S.logoTint ? (isSel ? css("pillText") : css("text")) : css("logoArt"));
       } else {
         node = el("div", {
           left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px",
@@ -1827,7 +1906,7 @@
           textAlign: "center", overflow: "hidden"
         }, upper(names[ni], S.uCar));
       }
-      node.style.opacity = fade;
+      node.style.opacity = fade * (S.logoArtA / 100);
       if (grow !== 1) node.style.transform = "scale(" + grow + ")";
       grab(node, { x: { k: "carLogoW" }, y: { k: "carLogoH" } }, "Logo box size");
       scr.appendChild(node);
@@ -2261,8 +2340,10 @@
       drawTopBar(scr);
       if (page === "carousel") {
         drawSystemExtra(scr);
+        drawSysLayers(scr, false);
         if (FRONT_GEO && FRONT_GEO.z <= 40) drawFrontExtra(scr);
         drawCarousel(scr);
+        drawSysLayers(scr, true);
         if (FRONT_GEO && FRONT_GEO.z > 40) drawFrontExtra(scr);
         drawSystemInfo(scr);
       }

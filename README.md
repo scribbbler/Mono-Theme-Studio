@@ -126,6 +126,12 @@ merge across files the way the engine merges them, so a carousel defined in one
 file and adjusted in another keeps both halves. Carousels can be horizontal as
 well as vertical.
 
+A theme's own stacking is reproduced too: extras declared in the system view
+are drawn in `zIndex` order, split around the carousel at 40, so a wash laid
+over the artwork to make a logo readable appears here as it does on the device.
+The logo image's own `<color>` is applied with its alpha, which is how a theme
+dims busy screenshots without touching the files.
+
 Placement comes from the theme rather than from assumptions about it: the
 status bar honours each element's box, its `alignment` and the battery's
 `horizontalAlignment` (whose engine default is *left* — the Mono themes are the
