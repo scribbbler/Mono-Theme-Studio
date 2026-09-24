@@ -1828,6 +1828,16 @@
     }
   }
 
+  // Width the list actually gets. With art on screen that is the detailed view,
+  // where a theme narrows the textlist so it clears the art box; the basic view
+  // keeps the full width. Derived from where the art sits, so dragging the box
+  // reflows the list.
+  var GL_ART_GAP = 16;
+  function glListWidth() {
+    if (!S.glArt || S.artX <= S.glLeft) return S.glWidth;
+    return Math.max(80, Math.min(S.glWidth, S.artX - S.glLeft - GL_ART_GAP));
+  }
+
   function drawGamelist(scr) {
     if (!ART.gameArt || ART.gameArt.sample) applySampleArt();
     if (S.glArt) {
@@ -1861,9 +1871,10 @@
       var isSel = i === glCursor;
       var y = S.glTop + i * S.glPitch;
       if (isSel) {
+        var listW = glListWidth();
         var w = S.glFit
-          ? Math.min(textWidth(upper(name, S.uGl), S.glFont, S.fGl) + S.glInset * 2, S.glWidth)
-          : S.glWidth;
+          ? Math.min(textWidth(upper(name, S.uGl), S.glFont, S.fGl) + S.glInset * 2, listW)
+          : listW;
         scr.appendChild(grab(el("div", {
           left: S.glLeft + "px", top: (y - 1) + "px", width: w + "px",
           height: S.glPillH + "px", background: pillBg(), borderRadius: S.glRadius + "px"
@@ -1871,7 +1882,7 @@
       }
       scr.appendChild(grab(el("div", {
         left: (S.glLeft + S.glInset) + "px", top: y + "px", height: S.glPillH + "px",
-        width: (S.glWidth - S.glInset) + "px", display: "flex", alignItems: "center",
+        width: (glListWidth() - S.glInset) + "px", display: "flex", alignItems: "center",
         font: fontCss(S.glFont, S.fGl),
         color: isSel ? css("pillText") : css("text"), whiteSpace: "nowrap", overflow: "hidden"
       }, upper(name, S.uGl)), { x: { k: "glLeft" }, y: { k: "glTop" } }, "Game list"));
@@ -2452,6 +2463,7 @@
     x.push('\t<zIndex>5</zIndex>');
     x.push('    </text>');
     x.push('    </view>');
+
     x.push('    </feature>');
     x.push('');
     ["system", "basic, detailed, video"].forEach(function (view) {
@@ -2516,14 +2528,6 @@
     x.push('         <selectorRadius>' + f(S.glRadius / SH, 6) + '</selectorRadius><!-- ' + S.glRadius + 'px -->');
     x.push('\t<scrollSound>./audio/move.wav</scrollSound>');
     x.push('    </textlist>');
-    if (S.glArt) {
-      var sizeProp = S.artMode === "fill" ? "minSize" : S.artMode === "stretch" ? "size" : "maxSize";
-      x.push('    <image name="md_image"><!-- scraped art; detailed / video views -->');
-      x.push('\t<pos>' + f((S.artX + S.artW / 2) / SW, 6) + ' ' + f((S.artY + S.artH / 2) / SH, 6) + '</pos><!-- centre of the ' + S.artW + 'x' + S.artH + 'px box -->');
-      x.push('\t<origin>0.5 0.5</origin>');
-      x.push('\t<' + sizeProp + '>' + f(S.artW / SW, 6) + ' ' + f(S.artH / SH, 6) + '</' + sizeProp + '><!-- ' + S.artMode + ' -->');
-      x.push('    </image>');
-    }
     if (ART.overlay || S.ovShow) {
       x.push('    <image name="screenOverlay" extra="true"><!-- drawn above the list -->');
       x.push('\t<path>' + PATHS.overlay + '</path>');
@@ -2541,6 +2545,25 @@
     x.push('         <zIndex>2</zIndex>');
     x.push('    </text>');
     x.push('    </view>');
+
+    // The engine does not reflow the list around the art: the detailed and
+    // video views are what a game with scraped art shows, so the narrower
+    // textlist and the image itself both belong to them.
+    if (S.glArt) {
+      var sizeProp = S.artMode === "fill" ? "minSize" : S.artMode === "stretch" ? "size" : "maxSize";
+      x.push('');
+      x.push('    <view name="detailed, video"><!-- shown once a game has scraped art -->');
+      x.push('    <textlist name="gamelist">');
+      x.push('\t<size>' + f(glListWidth() / SW, 6) + ' 0.7875</size><!-- ' + Math.round(glListWidth()) + 'px, narrowed so the rows clear the art -->');
+      x.push('    </textlist>');
+      x.push('    <image name="md_image"><!-- the scraped image -->');
+      x.push('\t<pos>' + f((S.artX + S.artW / 2) / SW, 6) + ' ' + f((S.artY + S.artH / 2) / SH, 6) + '</pos><!-- centre of the ' + S.artW + 'x' + S.artH + 'px box -->');
+      x.push('\t<origin>0.5 0.5</origin>');
+      x.push('\t<' + sizeProp + '>' + f(S.artW / SW, 6) + ' ' + f(S.artH / SH, 6) + '</' + sizeProp + '><!-- ' + S.artMode + ' -->');
+      x.push('    </image>');
+      x.push('    </view>');
+    }
+
     x.push('');
     x.push('    <view name="menu">');
     // a missing path here falls back to the engine's own :/frame.png panel

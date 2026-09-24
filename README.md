@@ -73,8 +73,12 @@ so you can walk a theme instead of inspecting it screen by screen.
   into the exported zip.
 - **System logos and game art** — switch the carousel from names to per-system
   logo images (`system/<id>.png`) with a logo box you can size, and place
-  scraped game art beside the gamelist as the detailed view does. Load a sample
-  image to see either in place.
+  scraped game art beside the gamelist as the detailed view does. Turning art on
+  narrows the list so the rows and the selection pill clear the box, and that
+  narrower list is written as a `detailed, video` view of its own — the engine
+  never reflows a list around an image, so a theme has to say it. The basic
+  view, which is what a game with no scraped art shows, keeps its full width.
+  Load a sample image to see either in place.
 
 The five **Mono** themes load as presets, so you can start from one and adjust.
 
