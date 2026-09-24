@@ -125,9 +125,8 @@
   }
   /* ---------- control rail ---------- */
   .rail {
-    background: var(--bg-2); border-radius: var(--r-input);
-    padding: var(--s300); margin: var(--s700) 0 var(--s700) var(--s700);
-    align-self: start; overflow: hidden;
+    margin: var(--s700) 0 var(--s700) var(--s700);
+    align-self: start;
   }
   /* Accordion - each group is a card on the rail's ground, headed by a 44px
      row that carries a plus when it is shut and a minus when it is open. */
@@ -395,6 +394,7 @@
     .rail {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
       max-height: 82dvh; display: flex; flex-direction: column;
+      background: var(--bg-2); margin: 0; padding: 0 var(--s300);
       border: 1px solid var(--border); border-bottom: 0;
       border-radius: var(--r-pop) var(--r-pop) 0 0;
       box-shadow: 0 -8px 30px rgba(0, 0, 0, .28);
