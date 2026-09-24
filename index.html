@@ -126,20 +126,9 @@
   /* ---------- control rail ---------- */
   .rail {
     background: var(--bg-2); border-radius: var(--r-input);
-    margin: var(--s700) 0 var(--s700) var(--s700); align-self: start;
-    overflow: hidden;
+    padding: var(--s300); margin: var(--s700) 0 var(--s700) var(--s700);
+    align-self: start; overflow: hidden;
   }
-  .railtabs {
-    display: flex; gap: 0; padding: 0 var(--s650);
-    position: sticky; top: 0; background: var(--bg-2); z-index: 5;
-  }
-  .railtabs .btn {
-    flex: 1; background: none; border-radius: 0; height: 48px; line-height: 48px;
-    color: var(--content-3); box-shadow: inset 0 -5px 0 0 transparent;
-    transition: color .15s ease, box-shadow .15s ease, background .15s ease;
-  }
-  .railtabs .btn:hover { background: var(--bg-2); color: var(--content); }
-  .railtabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
   /* Accordion - each group is a card on the rail's ground, headed by a 44px
      row that carries a plus when it is shut and a minus when it is open. */
   details.group {
@@ -423,7 +412,6 @@
       content: ""; display: block; width: 42px; height: 4px; margin: 0 auto;
       border-radius: 2px; background: var(--content-3); opacity: .5;
     }
-    .railtabs { top: 0; position: static; }
     .export { max-width: none; padding: 0 18px 20px; }
     pre.xml { max-height: 40vh; }
     header.bar { padding: 10px 14px; gap: 10px; }
@@ -3407,21 +3395,11 @@
     ]) }]
   };
 
-  var PAGE_NAME = { carousel: "Carousel", gamelist: "Gamelist", menu: "Menu",
-    keyboard: "Keyboard", saver: "Screensaver", popup: "Pop-up" };
   var railMode = "screen";
 
   function buildRail() {
     var rail = document.getElementById("railbody");
     rail.innerHTML = "";
-    var head = el("div"); head.className = "railtabs";
-    [["screen", PAGE_NAME[page]], ["general", "General"]].forEach(function (m) {
-      var b = el("button", null, m[1]);
-      b.className = "btn" + (railMode === m[0] ? " on" : "");
-      b.addEventListener("click", function () { railMode = m[0]; buildRail(); });
-      head.appendChild(b);
-    });
-    rail.appendChild(head);
     var groups = railMode === "general" ? GENERAL : (PAGE_GROUPS[page] || []);
     groups.forEach(function (g) {
       var d = el("details", null); d.className = "group"; if (g.open) d.open = true;
@@ -3681,10 +3659,21 @@
   function buildTabs() {
     var tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
+    // General is a tab of its own, ahead of the screens; picking it leaves the
+    // preview on whatever screen you were looking at.
+    var gen = el("button", null, "General");
+    gen.className = "btn" + (railMode === "general" ? " on" : "");
+    gen.addEventListener("click", function () {
+      railMode = "general"; buildTabs(); buildRail();
+    });
+    tabs.appendChild(gen);
     [["carousel", "Carousel"], ["gamelist", "Gamelist"], ["menu", "Menu"],
      ["keyboard", "Keyboard"], ["saver", "Screensaver"], ["popup", "Pop-up"]].forEach(function (t) {
-      var b = el("button", null, t[1]); b.className = "btn" + (page === t[0] ? " on" : "");
-      b.addEventListener("click", function () { page = t[0]; buildTabs(); buildRail(); render(); });
+      var b = el("button", null, t[1]);
+      b.className = "btn" + (railMode !== "general" && page === t[0] ? " on" : "");
+      b.addEventListener("click", function () {
+        page = t[0]; railMode = "screen"; buildTabs(); buildRail(); render();
+      });
       tabs.appendChild(b);
     });
     return;
