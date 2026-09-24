@@ -1830,6 +1830,20 @@
     scr.appendChild(node);
   }
 
+  function hasLogoArt() { return !!(SYSTEM_LOGOS.length || ART.sysLogo); }
+
+  function logoPlaceholder(x, y, label, sel, fade) {
+    var box = el("div", {
+      left: x + "px", top: y + "px", width: S.carLogoW + "px", height: S.carLogoH + "px",
+      border: "2px dashed " + (sel ? css("pillText") : css("text")),
+      borderRadius: "4px", opacity: fade * 0.55,
+      display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+      font: fontCss(Math.min(S.carFont, Math.round(S.carLogoH * 0.42)), S.fCar),
+      color: sel ? css("pillText") : css("text"), whiteSpace: "nowrap"
+    }, label);
+    return box;
+  }
+
   function drawCarousel(scr) {
     if (S.carType === "horizontal") return drawCarouselH(scr);
     if (S.carBandA > 0) {
@@ -1891,6 +1905,10 @@
         lg.style.backgroundPosition = bp;
         lg.style.webkitMaskPosition = lg.style.maskPosition = bp;
         scr.appendChild(grab(lg, { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
+      } else if (S.carLogos) {
+        // logos are on but the theme has none: show the box they would fill
+        scr.appendChild(grab(logoPlaceholder(S.carIndent, y + (S.carRowH - S.carLogoH) / 2,
+          upper(name, S.uCar), isSel, fade), { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       } else {
         scr.appendChild(grab(el("div", {
           left: S.carIndent + "px", top: y + "px", height: S.carRowH + "px",
@@ -1935,6 +1953,9 @@
         node = tinted({ left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px" },
           perSys || ART.sysLogo.src,
           S.logoTint ? (isSel ? css("pillText") : css("text")) : css("logoArt"));
+      } else if (S.carLogos) {
+        node = logoPlaceholder(x, yOff, upper(names[ni], S.uCar), isSel, 1);
+        node.style.width = lw + "px"; node.style.height = lh + "px";
       } else {
         node = el("div", {
           left: x + "px", top: yOff + "px", width: lw + "px", height: lh + "px",
@@ -2456,6 +2477,8 @@
           ? ["clock <b>" + S.ssClock + "px</b>", "date <b>" + Math.round(S.ssClock * 0.36) + "px</b> (36% of clock)"]
           : ["pop-up size and position are engine-side", "theme controls the <b>icon</b> and <b>font</b>"];
     // dragging is only discoverable if something says so
+    if (page === "carousel" && S.carLogos && !hasLogoArt())
+      parts.push("<b>no logo art</b> — the box is drawn empty; load one, or import a theme that ships them");
     if (S.helpPosSet && (S.helpX >= SW || S.helpY >= SH || S.helpX < -SW || S.helpY < 0))
       parts.push("<b>hint bar is off-screen</b> — the theme places it at " +
         Math.round(S.helpX) + "," + Math.round(S.helpY) + ", so the device shows none of it");
@@ -2933,7 +2956,8 @@
       { k: "lsCar", t: "num", label: "Line spacing", min: 1, max: 2, step: .01 },
       { k: "carType", t: "choice", label: "Direction", choices: [["vertical", "Vertical"], ["horizontal", "Horizontal"]],
         hint: "A horizontal carousel centres the selected system and steps the others sideways." },
-      { k: "carLogos", t: "bool", label: "Use system logos", hint: "When a logo image exists for a system, ES draws it instead of the name." },
+      { k: "carLogos", t: "bool", label: "Use system logos",
+        hint: "ES draws a logo instead of the name where one exists. The Mono themes ship none, so load a sample below to see it — the box is outlined meanwhile." },
       { k: "logoScale", t: "num", label: "Selected row scale", min: 1, max: 2, step: .05,
         hint: "Stock enlarges the selected entry by this much (its default is 1.2)." },
       { k: "stockFade", t: "bool", label: "Dim unselected rows", hint: "Stock fades entries by distance from the selection, down to 50%. This build keeps every row at full brightness." },
