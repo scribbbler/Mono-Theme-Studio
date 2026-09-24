@@ -125,12 +125,12 @@
   }
   /* ---------- control rail ---------- */
   .rail {
-    background: var(--bg); border-radius: var(--r-input);
+    background: var(--bg-2); border-radius: var(--r-input);
     margin: var(--s700) 0 var(--s700) var(--s700); align-self: start;
     overflow: hidden;
   }
   .railtabs {
-    display: flex; gap: 0; padding: 0 var(--s650); border-bottom: 1px solid var(--border);
+    display: flex; gap: 0; padding: 0 var(--s650);
     position: sticky; top: 0; background: var(--bg-2); z-index: 5;
   }
   .railtabs .btn {
@@ -140,22 +140,29 @@
   }
   .railtabs .btn:hover { background: var(--bg-2); color: var(--content); }
   .railtabs .btn.on { background: none; color: var(--content); box-shadow: inset 0 -5px 0 0 var(--content); }
-  details.group + details.group { border-top: 1px solid var(--border); }
-  /* Accordion - 16px/500 title, chevron on the right, divider above */
+  /* Accordion - each group is a card on the rail's ground, headed by a 44px
+     row that carries a plus when it is shut and a minus when it is open. */
+  details.group {
+    background: var(--bg); border-radius: 12px; overflow: hidden;
+  }
+  details.group + details.group { margin-top: var(--s300); }
   details.group > summary {
-    cursor: pointer; padding: var(--s600) var(--s650) var(--s300); font-size: 12px; font-weight: 600;
-    letter-spacing: .08em; text-transform: uppercase; color: var(--content);
-    display: flex; align-items: center; gap: var(--s300); list-style: none;
+    cursor: pointer; height: 44px; padding: 0 var(--s800) 0 var(--s700);
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--content); display: flex; align-items: center; list-style: none;
     transition: background .15s ease;
   }
   details.group > summary:hover { background: var(--bg-2); }
   details.group > summary::-webkit-details-marker { display: none; }
   details.group > summary::after {
-    content: ""; margin-left: auto; width: 8px; height: 8px;
-    border-right: 2px solid var(--content); border-bottom: 2px solid var(--content);
-    transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s ease;
+    content: ""; margin-left: auto; flex: 0 0 auto; width: 12px; height: 12px;
+    background:
+      linear-gradient(var(--content), var(--content)) center / 12px 2px no-repeat,
+      linear-gradient(var(--content), var(--content)) center / 2px 12px no-repeat;
   }
-  details.group[open] > summary::after { transform: rotate(225deg) translate(-3px, -3px); }
+  details.group[open] > summary::after {
+    background: linear-gradient(var(--content), var(--content)) center / 12px 2px no-repeat;
+  }
   /* An inspector, not a form: properties sit two to a row, clustered under the
      thing they affect, with the value editable in place. */
   .fields {
