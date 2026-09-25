@@ -2698,7 +2698,11 @@
         // same position - tinted() reads it from the style it is given
         var bp = S.carLogoAlign === "center" ? "center" : S.carLogoAlign === "right" ? "right center" : "left center";
         var lg = tinted({
-          left: S.carIndent + "px", top: y + "px",
+          // centre the logo box in the row, as the placeholder branch does and
+          // as the engine does -- it hangs the logo off its own origin at
+          // logoSize.y / 2. Drawing at the row top only looked right while the
+          // box was the full row height.
+          left: S.carIndent + "px", top: (y + (S.carRowH - S.carLogoH) / 2) + "px",
           width: S.carLogoW + "px", height: S.carLogoH + "px",
           webkitMaskPosition: bp
         }, perSys || ART.sysLogo.src,
