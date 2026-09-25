@@ -15,6 +15,12 @@ the preview, so the gallery cannot go stale — plus importing a theme you
 already have, or starting from the engine's own defaults. Pick one and the
 controls slide in beside the device.
 
+**A reload no longer costs you the work.** What you are editing is written to
+the browser as it changes and read back when you return, so refreshing, closing
+the tab or a crash picks up where you left off. Art and fonts you loaded are
+kept too when they fit the browser's quota; the theme itself always survives.
+**Start a theme** in the Import menu goes back to the templates.
+
 ![The carousel screen in the studio](docs/screenshot-carousel.png)
 
 ## Why it exists

@@ -220,30 +220,14 @@
   body:not(.started) .startbar .b-btn { padding: 0 var(--s800); }
 
   /* ---------- template gallery ---------- */
+  .b-card__media .screen.mini {
+    position: absolute; left: 0; top: 0; width: 640px; height: 480px;
+    transform-origin: top left; overflow: hidden;
+  }
   .tplgrid {
     display: grid; gap: var(--s500);
     grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
     max-height: min(62vh, 560px); overflow: auto; padding: 2px;
-  }
-  .tplcard {
-    display: flex; flex-direction: column; gap: var(--s300); padding: 0;
-    background: none; border: 0; cursor: pointer; text-align: left; font: inherit;
-  }
-  .tplshot {
-    width: 100%; aspect-ratio: 4 / 3; overflow: hidden; position: relative;
-    border-radius: var(--r-input); background: var(--bg-3);
-    box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .15s ease;
-  }
-  .tplcard:hover .tplshot { box-shadow: inset 0 0 0 2px var(--border-selected); }
-  .tplcard .screen.mini {
-    position: absolute; left: 0; top: 0; width: 640px; height: 480px;
-    transform-origin: top left; overflow: hidden;
-  }
-  .tplname { font-size: var(--font-xs); font-weight: 600; color: var(--content); }
-  .tplsub { font-size: var(--font-xs); color: var(--content-3); }
-  .tplcard.plain .tplshot {
-    display: flex; align-items: center; justify-content: center;
-    color: var(--content-3); font-size: 28px;
   }
 
   /* ---------- control rail ---------- */
@@ -346,6 +330,30 @@
   }
   .b-seg__btn:hover { color: var(--content); }
   .b-seg__btn[aria-pressed="true"] { background: var(--bg); color: var(--content); }
+
+  /* ---- Card: Base's Root -- a 2px borderOpaque border, radius400, on
+       backgroundPrimary, clipped. The clickable variant adds the interactive
+       states Base uses elsewhere: the border goes to borderSelected on hover,
+       the fill to backgroundSecondary when pressed or chosen. ---- */
+  .b-card {
+    display: flex; flex-direction: column; box-sizing: border-box;
+    background: var(--bg); color: var(--content);
+    border: 2px solid var(--border); border-radius: var(--radius400);
+    overflow: hidden; text-align: left; font: inherit; padding: 0;
+  }
+  .b-card--clickable { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+  .b-card--clickable:hover { border-color: var(--border-selected); }
+  .b-card--clickable:active { background: var(--bg-2); }
+  .b-card--clickable[aria-pressed="true"] { border-color: var(--border-selected); background: var(--bg-2); }
+  .b-card--clickable:focus-visible { outline: 3px solid var(--border-selected); outline-offset: 2px; }
+  .b-card__media {
+    position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden;
+    background: var(--bg-3); display: flex; align-items: center; justify-content: center;
+    color: var(--content-3); font-size: 28px;
+  }
+  .b-card__text { padding: var(--s400) var(--s500) var(--s500); display: grid; gap: 2px; }
+  .b-card__title { font-size: var(--font-xs); font-weight: 600; color: var(--content); }
+  .b-card__body { font-size: var(--font-xs); color: var(--content-3); }
 
   /* ---- Menu: a popover surface of items, on Base's menu tokens ---- */
   .b-menu-anchor { position: relative; display: inline-flex; }
@@ -1367,6 +1375,24 @@
       return anchor;
     },
 
+    card: function (o) {
+      o = o || {};
+      var root = el(o.onClick ? "button" : "div");
+      if (o.onClick) { root.type = "button"; root.addEventListener("click", o.onClick); }
+      root.className = "b-card" + (o.onClick ? " b-card--clickable" : "") + (o.cls ? " " + o.cls : "");
+      var media = el("div"); media.className = "b-card__media";
+      if (o.media) media.appendChild(o.media);
+      else if (o.glyph) media.textContent = o.glyph;
+      root.appendChild(media);
+      if (o.title || o.body) {
+        var txt = el("div"); txt.className = "b-card__text";
+        if (o.title) txt.appendChild(el("div", null, o.title)).className = "b-card__title";
+        if (o.body) txt.appendChild(el("div", null, o.body)).className = "b-card__body";
+        root.appendChild(txt);
+      }
+      return root;
+    },
+
     checkbox: function (o) {
       var l = el("label"); l.className = "b-check";
       var i = el("input"); i.type = "checkbox";
@@ -1853,7 +1879,7 @@
       var known = FONT_LIB.filter(function (e) { return e.id === id; })[0];
       if (known) { S[key] = id; return; }
       jobs.push(Promise.resolve(files[path]()).then(function (bytes) {
-        var entry = { id: id, label: id.replace(/\.(ttf|otf)$/i, ""), src: bytesToDataURL(bytes, mimeOf(id)), fam: "F_i" + (++fontSeq) };
+        var entry = { id: id, label: id.replace(/\.(ttf|otf)$/i, ""), src: bytesToDataURL(bytes, mimeOf(id)), fam: "F_i" + (++fontSeq), user: true };
         FONT_LIB.push(entry);
         S[key] = id;
         return registerFont(entry);
@@ -3233,6 +3259,7 @@
     renderLegend();
     renderXML();
     if (zoomAuto) fitScreen();
+    saveSession();
   }
 
   var CW = 730, CH = 1056;   // device box, from the Figma frame
@@ -4064,7 +4091,7 @@
         var file = fin.files && fin.files[0]; if (!file) return;
         var rd = new FileReader();
         rd.onload = function () {
-          var entry = { id: file.name, label: file.name.replace(/\.(ttf|otf)$/i, ""), src: rd.result, fam: "F_u" + (++fontSeq) };
+          var entry = { id: file.name, label: file.name.replace(/\.(ttf|otf)$/i, ""), src: rd.result, fam: "F_u" + (++fontSeq) , user: true };
           FONT_LIB.push(entry);
           registerFont(entry).then(function () { buildRail(); render(); toast(entry.label + " added"); });
         };
@@ -4316,6 +4343,75 @@
   }
 
   var currentPreset = "Mono Dark";
+  // ---------- session ----------
+  // A reload used to throw the work away. The editable state is small -- a few
+  // hundred numbers, colours and paths -- so it is written to localStorage as
+  // it changes and read back on load. Art and fonts you loaded are data URLs
+  // and can run to megabytes, so they are attempted but dropped if the quota
+  // says no; the theme itself always survives.
+  var SAVE_KEY = "mts-session";
+  var saveTimer = null;
+
+  function sessionPayload(withAssets) {
+    var p = {
+      v: 1, S: S, PATHS: PATHS, preset: currentPreset,
+      page: page, railMode: railMode, zoom: zoom, zoomAuto: zoomAuto,
+      engine: S.engine
+    };
+    if (withAssets) {
+      var art = {};
+      Object.keys(ART).forEach(function (k) {
+        var a = ART[k];
+        // defaults and the stand-in game art are rebuilt on load, not stored
+        if (a && !a.sample && a.src && a.src !== DEFAULT_ART[k]) art[k] = { src: a.src, name: a.name };
+      });
+      if (Object.keys(art).length) p.art = art;
+      var fonts = FONT_LIB.filter(function (f) { return f.user; });
+      if (fonts.length) p.fonts = fonts;
+    }
+    return p;
+  }
+
+  function saveSession() {
+    if (!started) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(sessionPayload(true)));
+      } catch (e) {
+        // over quota: keep the theme, drop the loaded assets
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(sessionPayload(false))); }
+        catch (e2) {}
+      }
+    }, 300);
+  }
+
+  function restoreSession() {
+    var raw = null;
+    try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+    if (!raw) return false;
+    var d;
+    try { d = JSON.parse(raw); } catch (e) { return false; }
+    if (!d || !d.S) return false;
+    // merge onto a preset so a state saved by an older build still opens
+    S = Object.assign({}, PRESETS["Mono Dark"], d.S);
+    if (d.PATHS) Object.assign(PATHS, d.PATHS);
+    currentPreset = d.preset || null;
+    page = d.page || "carousel";
+    railMode = d.railMode || "screen";
+    if (d.zoom) { zoom = d.zoom; zoomAuto = d.zoomAuto !== false ? d.zoomAuto : false; }
+    resetArt(true);
+    if (d.art) Object.keys(d.art).forEach(function (k) { ART[k] = d.art[k]; });
+    if (d.fonts) d.fonts.forEach(function (f) {
+      if (FONT_LIB.some(function (e) { return e.id === f.id; })) return;
+      FONT_LIB.push(f);
+      registerFont(f).then(function () { render(); });
+    });
+    return true;
+  }
+
+  function clearSession() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+
   // ---------- landing ----------
   // Engine defaults: what the build draws when a theme says nothing. Used by
   // "Start from scratch" so it is a real blank slate, not a copy of Mono Dark.
@@ -4361,23 +4457,23 @@
   }
 
   function tplCard(opts) {
-    var b = el("button"); b.type = "button"; b.className = "tplcard" + (opts.plain ? " plain" : "");
-    var shot = el("div"); shot.className = "tplshot";
-    if (opts.plain) shot.textContent = opts.glyph || "+";
-    else {
-      var mini = miniPreview(opts.state);
-      shot.appendChild(mini);
-      // scale 640x480 into the card once it has a width
-      requestAnimationFrame(function () {
-        var w = shot.clientWidth || 168;
-        mini.style.transform = "scale(" + (w / SW) + ")";
-      });
+    var mini = null;
+    if (!opts.plain) mini = miniPreview(opts.state);
+    var card = UI.card({
+      media: mini, glyph: opts.plain ? (opts.glyph || "+") : null,
+      title: opts.name, body: opts.sub, onClick: opts.onPick || function () {}
+    });
+    if (mini) {
+      // the preview is drawn at 640x480 and scaled into whatever width the
+      // grid gives the card
+      var fit = function () {
+        var w = card.querySelector(".b-card__media").clientWidth;
+        if (w) mini.style.transform = "scale(" + (w / SW) + ")";
+      };
+      requestAnimationFrame(fit);
+      setTimeout(fit, 60);
     }
-    b.appendChild(shot);
-    b.appendChild(el("div", null, opts.name)).className = "tplname";
-    if (opts.sub) b.appendChild(el("div", null, opts.sub)).className = "tplsub";
-    if (opts.onPick) b.addEventListener("click", opts.onPick);
-    return b;
+    return card;
   }
 
   function buildTemplates() {
@@ -4566,6 +4662,9 @@
       + '<circle cx="10" cy="16" r="1.7" fill="currentColor"/></svg>';
 
   var IMPORT_ITEMS = [
+    // a session is restored on load, so the landing no longer comes back on a
+    // reload; this is the way back to the templates
+    { label: "Start a theme\u2026", onClick: function () { buildTemplates(); openDlg(tplBox); } },
     { label: "Import .zip", file: true, accept: ".zip,application/zip",
       onFiles: function (f) { openZip(f[0]); } },
     { label: "Import folder", file: true, multiple: true, directory: true,
@@ -4703,8 +4802,10 @@
   if (/general/i.test(location.hash)) railMode = "general";
   applyTheme();
   buildStartBar();
+  var resumed = restoreSession();
   buildPad(); buildIO(); buildEngine();
   buildPresets(); buildRail(); buildTabs(); render();
+  if (resumed) { startEditing(); toast("Picked up where you left off"); }
   // register the bundled faces, then redraw so measurements use real metrics
   Promise.all(FONT_LIB.map(registerFont)).then(function () { render(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
