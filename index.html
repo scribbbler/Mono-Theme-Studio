@@ -890,7 +890,11 @@
   // Mono Max is Mono Dark showing each system's logo instead of its name, so
   // it inherits everything else rather than repeating it.
   PRESETS["Mono Max"] = Object.assign({}, PRESETS["Mono Dark"], {
-    carLogos: true, carLogoW: 320, carLogoH: 48, carLogoAlign: "left"
+    // Not just Mono Dark with logos any more: the artwork is tight-cropped and
+    // mostly limited by width, so the box is 512 wide and the list drops to
+    // three rows to make room for it. Indent follows the box at logoSize.x/10.
+    carLogos: true, carLogoW: 512, carLogoH: 72, carLogoAlign: "left",
+    carRows: 3, carIndent: 51, carPillH: 104, carRadius: 52, carFont: 56
   });
 
   Object.keys(PRESETS).forEach(function (name) {
