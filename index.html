@@ -891,10 +891,13 @@
   // it inherits everything else rather than repeating it.
   PRESETS["Mono Max"] = Object.assign({}, PRESETS["Mono Dark"], {
     // Not just Mono Dark with logos any more: the artwork is tight-cropped and
-    // mostly limited by width, so the box is 512 wide and the list drops to
-    // three rows to make room for it. Indent follows the box at logoSize.x/10.
-    carLogos: true, carLogoW: 512, carLogoH: 72, carLogoAlign: "left",
-    carRows: 3, carIndent: 51, carPillH: 104, carRadius: 52, carFont: 56
+    // mostly limited by width, so the box is 608 wide and the list drops to
+    // three rows to make room for it. Centred, in the carousel and the gamelist
+    // both -- which is also what lets the box be that wide, since a left-aligned
+    // vertical carousel ties its indent to logoSize.x / 10.
+    carLogos: true, carLogoW: 608, carLogoH: 72, carLogoAlign: "center",
+    carRows: 3, carIndent: 16, carPillH: 104, carRadius: 52, carFont: 56,
+    glAlign: "center"
   });
 
   Object.keys(PRESETS).forEach(function (name) {
