@@ -3241,7 +3241,14 @@
   var zoomAuto = true;       // until you use the control, it tracks the space
 
   // the largest level that still fits the space the stage leaves for it
+  // At the desktop breakpoint the device opens at 50% -- the controls are the
+  // work and the device is the reference, so it starts out of the way and you
+  // zoom in when you want to look closely. Under that breakpoint there is less
+  // room, so it takes the largest level that actually fits.
+  function isDesktop() { return window.matchMedia("(min-width: 1136px)").matches; }
+
   function bestZoom() {
+    if (isDesktop()) return 0.5;
     var wrap = document.getElementById("devicewrap");
     var w = wrap && wrap.clientWidth ? wrap.clientWidth : window.innerWidth - 460;
     var h = wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight - 190;
