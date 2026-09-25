@@ -2639,6 +2639,17 @@
     return SYSTEM_LOGO_ART[id] || null;
   }
 
+  // Where the logo box sits across the screen. The engine derives this from the
+  // alignment, not from the indent: logoSize.x / 10 when left, (size.x -
+  // logoSize.x) / 2 when centred, size.x - logoSize.x * 1.1 when right. Only
+  // the left case is the indent, which is why a centred carousel drawn at the
+  // indent lands wherever that number happens to be rather than in the middle.
+  function logoBoxX() {
+    if (S.carLogoAlign === "center") return (SW - S.carLogoW) / 2;
+    if (S.carLogoAlign === "right") return SW - S.carLogoW * 1.1;
+    return S.carIndent;
+  }
+
   function logoPlaceholder(x, y, label, sel, fade) {
     var box = el("div", {
       left: x + "px", top: y + "px", width: S.carLogoW + "px", height: S.carLogoH + "px",
@@ -2709,18 +2720,18 @@
           // as the engine does -- it hangs the logo off its own origin at
           // logoSize.y / 2. Drawing at the row top only looked right while the
           // box was the full row height.
-          left: S.carIndent + "px", top: (y + (S.carRowH - S.carLogoH) / 2) + "px",
+          left: logoBoxX() + "px", top: (y + (S.carRowH - S.carLogoH) / 2) + "px",
           width: S.carLogoW + "px", height: S.carLogoH + "px",
           webkitMaskPosition: bp
         }, perSys || ART.sysLogo.src,
            S.logoTint ? (isSel ? css("pillText") : css("text")) : css("logoArt"));
         lg.style.opacity = fade * (S.logoArtA / 100);
-        if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = "left center"; }
+        if (grow !== 1) { lg.style.transform = "scale(" + grow + ")"; lg.style.transformOrigin = bp; }
         lg.style.backgroundPosition = bp;
         scr.appendChild(grab(lg, { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       } else if (S.carLogos) {
         // logos are on but the theme has none: show the box they would fill
-        scr.appendChild(grab(logoPlaceholder(S.carIndent, y + (S.carRowH - S.carLogoH) / 2,
+        scr.appendChild(grab(logoPlaceholder(logoBoxX(), y + (S.carRowH - S.carLogoH) / 2,
           upper(name, S.uCar), isSel, fade), { x: { k: "carIndent" }, y: { k: "carTop" } }, "Carousel"));
       } else {
         scr.appendChild(grab(el("div", {
