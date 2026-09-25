@@ -415,7 +415,9 @@
   /* the font pickers were bare <select>s wearing whatever the browser gave them */
 
   .seg button[aria-pressed="true"] { background: var(--bg); color: var(--content); }
-  .val { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s500); min-width: 0; }
+  .val { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+         font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--content-3); }
 
   .field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--s100); }
   .field > .seg { align-self: stretch; }
@@ -784,7 +786,7 @@
   // key fill is the one that has to differ, so light themes stay readable.
   var SHARED = {
     kbWidth: 624, kbTop: 116, kbSpacing: 6, kbRadius: 8, kbIcon: 24,
-    kbPress: "#CCCCCC", kbFlash: 150, kbShift: false,
+    kbPress: "#CCCCCC", kbFlash: 150, kbShift: false, popWhich: "volume",
     kbFontOn: false, kbFont: 23, fKbKey: "BPreplay-Bold.otf",
     ssClock: 100, ssLock: true, ssCharge: false,
     // per-layer typography: font file, uppercase, line spacing
@@ -2992,41 +2994,63 @@
     }, "04:20 AM"));
   }
 
-  function drawPopup(scr) {
-    // representative volume / brightness overlay: geometry is engine-side,
-    // the icon and font come from the theme.
-    var w = 360, h = 96, x = (SW - w) / 2, y = (SH - h) / 2;
+  // The volume and brightness overlays, drawn the way the build draws them:
+  // a 58x184 panel 12px into a top corner, a % label, a vertical 24x100 bar
+  // filling from the bottom, and a 24x24 icon under it. Geometry and colour
+  // are engine-side (VolumeInfoComponent / BrightnessInfoComponent); the
+  // theme supplies the icon and the label's font.
+  var POP = { w: 58, h: 184, r: 12, inset: 12, barX: 17, barY: 42, barW: 24, barH: 100,
+              iconY: 150, iconBox: 24, label: 17, level: 62 };
+
+  function drawPopupPanel(scr, which) {
+    var x = which === "brightness" ? POP.inset : SW - POP.w - POP.inset;
+    var y = POP.inset;
+
     scr.appendChild(el("div", {
-      left: x + "px", top: y + "px", width: w + "px", height: h + "px",
-      background: css("bg"), border: "2px solid " + css("text"), borderRadius: "16px", opacity: ".97"
+      left: x + "px", top: y + "px", width: POP.w + "px", height: POP.h + "px",
+      background: "rgba(0,0,0,.8)", borderRadius: POP.r + "px"
     }));
-    var iconBox = 40, pad = 24;
-    if (ART.popVolume) {
+
+    // the % sits in a 24px band 10px down, centred across the panel
+    scr.appendChild(el("div", {
+      left: x + "px", top: (y + 10) + "px", width: POP.w + "px", height: "24px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      font: fontCss(POP.label, S.fPop), color: "#FFFFFF"
+    }, POP.level + "%"));
+
+    // track, then the fill growing from the bottom
+    scr.appendChild(el("div", {
+      left: (x + POP.barX) + "px", top: (y + POP.barY) + "px",
+      width: POP.barW + "px", height: POP.barH + "px",
+      background: "rgba(255,255,255,.32)", borderRadius: "4px"
+    }));
+    var fillH = POP.barH * POP.level / 100;
+    scr.appendChild(el("div", {
+      left: (x + POP.barX) + "px", top: (y + POP.barY + POP.barH - fillH) + "px",
+      width: POP.barW + "px", height: fillH + "px",
+      background: "rgba(255,255,255,.8)",
+      borderRadius: Math.min(4, fillH / 2) + "px"
+    }));
+
+    var art = which === "brightness" ? ART.popBright : ART.popVolume;
+    var ix = x + POP.barX, iy = y + POP.iconY;
+    if (art) {
       scr.appendChild(tinted({
-        left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px",
-        width: iconBox + "px", height: iconBox + "px"
-      }, ART.popVolume.src, css("text")));
+        left: ix + "px", top: iy + "px",
+        width: POP.iconBox + "px", height: POP.iconBox + "px"
+      }, art.src, "#FFFFFF"));
     } else {
       scr.appendChild(el("div", {
-        left: (x + pad) + "px", top: (y + (h - iconBox) / 2) + "px", width: iconBox + "px",
-        height: iconBox + "px", display: "flex", alignItems: "center", justifyContent: "center",
-        font: fontCss(30, S.fPop), color: css("text")
-      }, "♪"));
+        left: ix + "px", top: iy + "px", width: POP.iconBox + "px", height: POP.iconBox + "px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        font: fontCss(18, S.fPop), color: "#FFFFFF"
+      }, which === "brightness" ? "\u2600" : "\u266A"));
     }
-    var barX = x + pad + iconBox + 18, barW = w - (pad * 2) - iconBox - 18 - 56;
-    scr.appendChild(el("div", {
-      left: barX + "px", top: (y + h / 2 - 7) + "px", width: barW + "px", height: "14px",
-      background: css("text"), opacity: ".25", borderRadius: "7px"
-    }));
-    scr.appendChild(el("div", {
-      left: barX + "px", top: (y + h / 2 - 7) + "px", width: (barW * 0.62) + "px", height: "14px",
-      background: css("text"), borderRadius: "7px"
-    }));
-    scr.appendChild(el("div", {
-      left: (barX + barW + 12) + "px", top: (y + h / 2 - 16) + "px", width: "46px", height: "32px",
-      display: "flex", alignItems: "center", justifyContent: "flex-end",
-      font: fontCss(22, S.fPop), color: css("text")
-    }, "62"));
+  }
+
+  function drawPopup(scr) {
+    // the device raises one of these at a time, so the preview shows one
+    drawPopupPanel(scr, S.popWhich === "brightness" ? "brightness" : "volume");
   }
 
   function drawBackdrop(scr) {
@@ -3830,6 +3854,9 @@
       { name: "Screensaver icons", fields: artFields(["ssLockIcon", "ssBattIcon"]) }
     ],
     popup: [{ name: "Pop-up", open: true, fields: [
+      { k: "popWhich", t: "choice", label: "Preview",
+        choices: [["volume", "Volume"], ["brightness", "Brightness"]],
+        hint: "The device raises one at a time: volume to the top right, brightness to the top left." },
       { k: "fPop", t: "font", label: "Value font" }
     ].concat(artFields(["popVolume", "popBright"])).concat([
       { t: "note", label: "Volume and brightness overlays take their icon and font from the theme; the box size and position come from the build." }
