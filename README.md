@@ -230,6 +230,6 @@ The tool is MIT licensed. The three stand-in game images are downscaled
 screenshots of SNES titles, included as preview aids; they remain the property
 of their respective publishers and are not covered by the MIT grant. The system
 and game names come from the Tiny Best Set GO! list by Lewis Nakao, and the
-bundled system logos from the Onyx UI theme — both preview aids, under their
-own terms. **BPreplay** is bundled for the preview and remains
+bundled system logos from [Monochrome Gaming Logos](https://github.com/HVR88/Monochrome-Gaming-Logos)
+by HVR88 — both preview aids, under their own terms. **BPreplay** is bundled for the preview and remains
 under its own licence — it is not part of the MIT grant.
