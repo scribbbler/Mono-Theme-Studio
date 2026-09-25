@@ -9,6 +9,12 @@ and a ready-to-use `theme.xml` underneath that updates as you drag.
 phones home. It works on a phone too: the device fills the screen and the
 controls ride up in a bottom sheet.
 
+It opens on the device alone with one button. **Create Theme** shows the
+templates — the six Mono themes, each card drawn by the same code that draws
+the preview, so the gallery cannot go stale — plus importing a theme you
+already have, or starting from the engine's own defaults. Pick one and the
+controls slide in beside the device.
+
 ![The carousel screen in the studio](docs/screenshot-carousel.png)
 
 ## Why it exists

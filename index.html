@@ -203,6 +203,49 @@
     width: 100%; margin: 0;
     padding: 0 max(var(--s700), calc((100% - 1300px) / 2));
   }
+  /* ---------- landing ----------
+     Before a theme is chosen the tool is just the device and one button.
+     The rail's column is zero-width, so choosing a theme widens it and the
+     device slides right of its own accord rather than being animated apart. */
+  main { transition: grid-template-columns .45s cubic-bezier(.32, .72, 0, 1); }
+  body:not(.started) main { grid-template-columns: 0px minmax(0, 1fr); }
+  body:not(.started) .rail { opacity: 0; transform: translateX(-24px); pointer-events: none; }
+  body:not(.started) .tabs,
+  body:not(.started) .engine,
+  body:not(.started) .legend,
+  body:not(.started) .zoom { display: none; }
+  .rail { transition: opacity .3s ease .12s, transform .35s cubic-bezier(.32, .72, 0, 1) .12s; }
+  .startbar { display: none; padding: var(--s600) 0 var(--s400); }
+  body:not(.started) .startbar { display: flex; justify-content: center; }
+  body:not(.started) .startbar .b-btn { padding: 0 var(--s800); }
+
+  /* ---------- template gallery ---------- */
+  .tplgrid {
+    display: grid; gap: var(--s500);
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    max-height: min(62vh, 560px); overflow: auto; padding: 2px;
+  }
+  .tplcard {
+    display: flex; flex-direction: column; gap: var(--s300); padding: 0;
+    background: none; border: 0; cursor: pointer; text-align: left; font: inherit;
+  }
+  .tplshot {
+    width: 100%; aspect-ratio: 4 / 3; overflow: hidden; position: relative;
+    border-radius: var(--r-input); background: var(--bg-3);
+    box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .15s ease;
+  }
+  .tplcard:hover .tplshot { box-shadow: inset 0 0 0 2px var(--border-selected); }
+  .tplcard .screen.mini {
+    position: absolute; left: 0; top: 0; width: 640px; height: 480px;
+    transform-origin: top left; overflow: hidden;
+  }
+  .tplname { font-size: var(--font-xs); font-weight: 600; color: var(--content); }
+  .tplsub { font-size: var(--font-xs); color: var(--content-3); }
+  .tplcard.plain .tplshot {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--content-3); font-size: 28px;
+  }
+
   /* ---------- control rail ---------- */
   /* main is centred on the same gutter the header pads with, so no left
      margin here puts the cards under the title rather than beside it */
@@ -220,6 +263,11 @@
      Nothing outside this block styles a control; call sites ask the
      library for one.
      ================================================================== */
+
+  /* the UA's [hidden] rule loses to any class that sets display, so the
+     library restates it for every component it ships */
+  .b-btn[hidden], .b-select[hidden], .b-input[hidden], .b-seg[hidden],
+  .b-check[hidden], .b-menu-anchor[hidden] { display: none; }
 
   /* ---- Button: primary | secondary | tertiary, + icon shape ---- */
   .b-btn {
@@ -558,7 +606,7 @@
   .sheetbox::backdrop { background: var(--overlay); }
   .sheetbox .head { display: flex; align-items: center; gap: var(--s500); margin-bottom: var(--s600); }
   .sheetbox h2 { margin: 0; font-size: 16px; font-weight: 600; }
-  .sheetbox .head .btn:first-of-type { margin-left: auto; }
+  .sheetbox .head .b-btn:first-of-type { margin-left: auto; }
   .sheetbox .note { border-left: 0; padding-left: 0; max-width: none; font-size: 13px; line-height: 19px; }
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -687,11 +735,19 @@
     </div>
     </div>
     <div class="legend" id="legend"></div>
-
+    <div class="startbar" id="startbar"></div>
     </section>
 </main>
 
 <button class="b-btn b-btn--primary" id="zip" type="button">Download .zip</button>
+
+<dialog class="sheetbox wide" id="tplbox">
+  <div class="head">
+    <h2>Start a theme</h2>
+    <button class="b-btn b-btn--tertiary" id="tplclose" type="button" aria-label="Close">Close</button>
+  </div>
+  <div class="tplgrid" id="tplgrid"></div>
+</dialog>
 
 <dialog class="sheetbox wide" id="xmlbox">
   <div class="head">
@@ -4241,6 +4297,7 @@
   function buildPresets() {
     var box = document.getElementById("presets");
     box.innerHTML = "";
+    if (!started) return;
     // six themes no longer fit as buttons, and they are a single choice anyway
     var sel = UI.select({
       options: Object.keys(PRESETS),
@@ -4252,6 +4309,124 @@
   }
 
   var currentPreset = "Mono Dark";
+  // ---------- landing ----------
+  // Engine defaults: what the build draws when a theme says nothing. Used by
+  // "Start from scratch" so it is a real blank slate, not a copy of Mono Dark.
+  function scratchState() {
+    var base = Object.assign({}, PRESETS["Mono Dark"]);
+    base.bg = "#000000"; base.bgSys = "#000000"; base.bgGl = "#000000"; base.bgMnu = "#000000";
+    base.text = "#FFFFFF"; base.pill = "#FFFFFF"; base.pillText = "#000000";
+    base.pillGrad = false; base.pillEnd = "#FFFFFF";
+    base.helpPill = "#000000"; base.helpText = "#FFFFFF"; base.helpChip = "#FFFFFF";
+    base.carFit = false; base.glFit = false; base.listScroll = false;
+    base.carLogos = false;
+    return base;
+  }
+
+  var started = false;
+  function startEditing() {
+    if (started) return;
+    started = true;
+    document.body.classList.add("started");
+    buildIO(); buildPresets(); buildTabs(); buildEngine(); buildRail(); render();
+    // the rail's column animates open, so the device needs refitting as it moves
+    var t0 = Date.now();
+    (function settle() {
+      fitScreen();
+      if (Date.now() - t0 < 700) requestAnimationFrame(settle);
+    })();
+  }
+
+  // A card shows the preset's own carousel, drawn by the same code the device
+  // uses, then scaled down - so the gallery cannot drift from the preview.
+  function miniPreview(state) {
+    var box = el("div"); box.className = "screen mini";
+    var keep = S, keepPage = page;
+    S = state; page = "carousel";
+    try {
+      drawTopBar(box);
+      if (S.carH) drawCarouselH(box); else drawCarousel(box);
+      drawHelp(box);
+    } catch (e) { /* a preset that cannot draw simply shows empty */ }
+    S = keep; page = keepPage;
+    box.style.background = state.bgSys || state.bg || "#000";
+    return box;
+  }
+
+  function tplCard(opts) {
+    var b = el("button"); b.type = "button"; b.className = "tplcard" + (opts.plain ? " plain" : "");
+    var shot = el("div"); shot.className = "tplshot";
+    if (opts.plain) shot.textContent = opts.glyph || "+";
+    else {
+      var mini = miniPreview(opts.state);
+      shot.appendChild(mini);
+      // scale 640x480 into the card once it has a width
+      requestAnimationFrame(function () {
+        var w = shot.clientWidth || 168;
+        mini.style.transform = "scale(" + (w / SW) + ")";
+      });
+    }
+    b.appendChild(shot);
+    b.appendChild(el("div", null, opts.name)).className = "tplname";
+    if (opts.sub) b.appendChild(el("div", null, opts.sub)).className = "tplsub";
+    if (opts.onPick) b.addEventListener("click", opts.onPick);
+    return b;
+  }
+
+  function buildTemplates() {
+    var grid = document.getElementById("tplgrid");
+    grid.innerHTML = "";
+    Object.keys(PRESETS).forEach(function (name) {
+      grid.appendChild(tplCard({
+        name: name, state: Object.assign({}, PRESETS[name]),
+        sub: name === "Mono Max" ? "logos instead of names"
+           : /Fit/.test(name) ? "pill hugs the name" : "",
+        onPick: function () { closeDlg(tplBox); loadPreset(name); startEditing(); }
+      }));
+    });
+    grid.appendChild(tplCard({
+      plain: true, glyph: "\u2295", name: "Start from scratch",
+      sub: "engine defaults",
+      onPick: function () {
+        closeDlg(tplBox);
+        currentPreset = null;
+        S = scratchState();
+        applyEngine("custom");
+        imported = null; SYSTEM_LOGOS = []; SYSTEM_EXTRAS = []; EXTRA_GEO = null;
+        resetArt(true);
+        startEditing();
+        toast("Started from engine defaults");
+      }
+    }));
+    var zipCard = tplCard({ plain: true, glyph: "\u2191", name: "Import .zip", sub: "a theme you have" });
+    var zi = el("input"); zi.type = "file"; zi.accept = ".zip,application/zip"; zi.style.display = "none";
+    zi.addEventListener("change", function () {
+      if (zi.files[0]) { closeDlg(tplBox); startEditing(); openZip(zi.files[0]); }
+    });
+    zipCard.appendChild(zi);
+    zipCard.addEventListener("click", function () { zi.click(); });
+    grid.appendChild(zipCard);
+
+    var folderCard = tplCard({ plain: true, glyph: "\u2191", name: "Import folder", sub: "a theme you have" });
+    var fi = el("input"); fi.type = "file"; fi.multiple = true; fi.style.display = "none";
+    try { fi.webkitdirectory = true; } catch (e) {}
+    fi.addEventListener("change", function () {
+      if (fi.files.length) { closeDlg(tplBox); startEditing(); openThemeFiles(collectFiles(fi.files)); }
+    });
+    folderCard.appendChild(fi);
+    folderCard.addEventListener("click", function () { fi.click(); });
+    grid.appendChild(folderCard);
+  }
+
+  function buildStartBar() {
+    var bar = document.getElementById("startbar");
+    bar.innerHTML = "";
+    bar.appendChild(UI.button({
+      label: "Create Theme", kind: "primary",
+      onClick: function () { buildTemplates(); openDlg(tplBox); }
+    }));
+  }
+
   function loadPreset(name) {
     currentPreset = name;
     S = Object.assign({}, PRESETS[name]);
@@ -4395,6 +4570,8 @@
     box.innerHTML = "";
     var zip = document.getElementById("zip");
 
+    if (!started) { if (zip) zip.hidden = true; box.appendChild(themeButton()); return; }
+
     if (isMobile()) {
       // one line: the download stays out, everything else folds behind a
       // three-dot overflow so the bar never wraps
@@ -4492,6 +4669,7 @@
   var railBody = document.getElementById("railbody");
   var aboutBox = document.getElementById("aboutbox");
   var xmlBox = document.getElementById("xmlbox");
+  var tplBox = document.getElementById("tplbox");
   function openDlg(d) { if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
   function closeDlg(d) { if (d.close) d.close(); else d.removeAttribute("open"); }
   document.getElementById("about").addEventListener("click", function () {
@@ -4499,6 +4677,7 @@
   });
   document.getElementById("aboutclose").addEventListener("click", function () { closeDlg(aboutBox); });
   document.getElementById("xmlclose").addEventListener("click", function () { closeDlg(xmlBox); });
+  document.getElementById("tplclose").addEventListener("click", function () { closeDlg(tplBox); });
 
   document.getElementById("zoomin").addEventListener("click", function () { stepZoom(1); });
   document.getElementById("zoomout").addEventListener("click", function () { stepZoom(-1); });
@@ -4516,6 +4695,7 @@
 
   if (/general/i.test(location.hash)) railMode = "general";
   applyTheme();
+  buildStartBar();
   buildPad(); buildIO(); buildEngine();
   buildPresets(); buildRail(); buildTabs(); render();
   // register the bundled faces, then redraw so measurements use real metrics
