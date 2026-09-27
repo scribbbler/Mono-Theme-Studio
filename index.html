@@ -852,7 +852,7 @@
     kbWidth: 624, kbTop: 116, kbSpacing: 6, kbRadius: 8, kbIcon: 24,
     kbPress: "#CCCCCC", kbFlash: 150, kbShift: false, popWhich: "volume",
     kbFontOn: false, kbFont: 23, fKbKey: "BPreplay-Bold.otf",
-    ssClock: 100, ssLock: true, ssCharge: false,
+    ssClock: 113, ssLock: true, ssCharge: false,   // 0.18 * 480 * BOOST
     // per-layer typography: font file, uppercase, line spacing
     fCar: "BPreplay-Bold.otf", uCar: false, lsCar: 1.171,
     fGl: "BPreplay-Bold.otf", uGl: false,
@@ -3054,54 +3054,118 @@
     }, "EmulationStation V2.13.0.0 · Build 20260923"));
   }
 
-  // The engine fixes this screen's geometry (SystemScreenSaver.cpp:1079):
-  // lock centre at 0.0458H, DATE centre at 0.37H, time centre at 0.517H, and
-  // the date is drawn at 0.36x the clock's size. The date sits ABOVE the time.
+  // The screensaver is a flip clock: two cards with the hour and the minute,
+  // a colon in the gap between them, the date above, and a black seam with a
+  // notch at each card edge drawn over the top. Geometry is engine-side
+  // (SystemScreenSaver.cpp, ClockScreenSaver::init) and fixed in screen
+  // fractions, so only the digit size and the fonts come from the theme.
+  var SAVER = {
+    cardW:  SW * 0.28125,               // 180
+    cardH:  SH * 0.375,                 // 180
+    cardY:  SH * 0.3458333,             // 166
+    cardX: [SW * 0.19375, SW * 0.525],  // 124 and 336, leaving a 32px gap
+    radius: SH * 0.375 / 15,            // 12
+    splitH: SH * 0.0083333,             // 4, the flip seam
+    notchW: SW * 0.28125 * 0.0333333,   // 6, straddling the card edge
+    notchH: SH * 0.375 * 0.0888889,     // 16, centred on the seam
+    lockY:  SH * 0.0458333,             // centre of the 24px lock
+    lockSz: SH * 0.05,
+    dateY:  SH * 0.2708333,             // centre of the date row
+    dateFont:     SH * 0.0573 * BOOST,  // the 36px row; not derived from the digits
+    meridiemFont: SH * 0.029  * BOOST,
+    cardBg: "#1D1D1D",
+    chargeIconW:  SH * 0.10
+  };
+
   var LOCK_SVG = svgIcon('<rect x="4" y="10.5" width="16" height="11" rx="2" fill="#fff"/>' +
     '<path d="M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3" fill="none" stroke="#fff" stroke-width="2"/>');
 
   function drawSaver(scr) {
-    var cx = SW / 2;
-    var lockSz = SH * 0.05, lockY = SH * 0.0458;
-    var dateY = SH * 0.37, timeY = SH * 0.517;
-    var subSize = Math.round(S.ssClock * 0.36);
+    var V = SAVER, i;
+    var ink = css("text");
+    // the date, lock and battery are drawn at 88% (mDimColor), the digits full
+    var dim = ink.replace(/rgba\(([^)]+),\s*([\d.]+)\)/, function (m, rgb, a) {
+      return "rgba(" + rgb + "," + (parseFloat(a) * 0.88) + ")";
+    });
+    var midY = V.cardY + V.cardH / 2;
+
+    // the panel is black regardless of the theme's background
+    scr.appendChild(el("div", {
+      left: "0px", top: "0px", width: SW + "px", height: SH + "px", background: "#000000"
+    }));
+
+    // the two cards, before anything that sits on them
+    for (i = 0; i < 2; i++) {
+      scr.appendChild(el("div", {
+        left: V.cardX[i] + "px", top: V.cardY + "px",
+        width: V.cardW + "px", height: V.cardH + "px",
+        background: V.cardBg, borderRadius: V.radius + "px"
+      }));
+    }
 
     if (S.ssLock) {
       scr.appendChild(tinted({
-        left: (cx - lockSz / 2) + "px", top: (lockY - lockSz / 2) + "px",
-        width: lockSz + "px", height: lockSz + "px"
-      }, ART.ssLockIcon ? ART.ssLockIcon.src : LOCK_SVG, css("text")));
+        left: (SW / 2 - V.lockSz / 2) + "px", top: (V.lockY - V.lockSz / 2) + "px",
+        width: V.lockSz + "px", height: V.lockSz + "px"
+      }, ART.ssLockIcon ? ART.ssLockIcon.src : LOCK_SVG, dim));
     }
 
     // the date row, or the charging line that replaces it on the same row
     var row = el("div", {
-      left: "0px", top: (dateY - subSize * 0.75) + "px", width: SW + "px",
-      height: (subSize * 1.5) + "px",
+      left: "0px", top: (V.dateY - V.dateFont * 0.75) + "px",
+      width: SW + "px", height: (V.dateFont * 1.5) + "px",
       display: "flex", alignItems: "center", justifyContent: "center",
       gap: (SH * 0.021) + "px",
-      font: fontCss(subSize, S.fSaver), color: css("text"),
-      textShadow: "0 0 2px rgba(0,0,0,.38)"
+      font: fontCss(Math.round(V.dateFont), S.fSaver), color: dim
     });
     if (S.ssCharge) {
-      var iconW = SH * 0.10;
       row.appendChild(ART.ssBattIcon
-        ? tinted({ position: "relative", width: iconW + "px", height: subSize + "px" },
-            ART.ssBattIcon.src, css("text"))
-        : el("div", { position: "relative", width: iconW + "px", height: subSize + "px",
-            border: "2px solid " + css("text"), borderRadius: "3px" }));
+        ? tinted({ position: "relative", width: V.chargeIconW + "px", height: V.dateFont + "px" },
+                  ART.ssBattIcon.src, dim)
+        : el("div", { position: "relative", width: V.chargeIconW + "px", height: V.dateFont + "px",
+                      border: "2px solid " + dim, borderRadius: "3px" }));
     }
-    // "Wed, 31 Jan" - abbreviated weekday and month, as formatClockDate builds it
-    row.appendChild(el("span", { position: "relative" }, S.ssCharge ? "82% Charged" : "Tue, 23 Sep"));
+    // "Tue, 23 Sep" - abbreviated weekday and month, as formatClockDate builds it
+    row.appendChild(el("span", { position: "relative" },
+      S.ssCharge ? "82% Charged" : "Tue, 23 Sep"));
     scr.appendChild(row);
 
-    // the time, below the date
+    // hour, minute and the colon that sits in the gap between the cards
+    function digits(x, w, text) {
+      scr.appendChild(el("div", {
+        left: x + "px", top: (midY - S.ssClock * 0.75) + "px",
+        width: w + "px", height: (S.ssClock * 1.5) + "px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        font: fontCss(S.ssClock, S.fSaver), color: ink
+      }, text));
+    }
+    var gapX = V.cardX[0] + V.cardW;
+    digits(V.cardX[0], V.cardW, "04");
+    digits(V.cardX[1], V.cardW, "20");
+    digits(gapX, V.cardX[1] - gapX, ":");
+
+    // AM/PM, top-left inside the hour card
     scr.appendChild(el("div", {
-      left: "0px", top: (timeY - S.ssClock * 0.75) + "px", width: SW + "px",
-      height: (S.ssClock * 1.5) + "px",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      font: fontCss(S.ssClock, S.fSaver), color: css("text"),
-      textShadow: "0 0 4px rgba(0,0,0,.5)"
-    }, "04:20 AM"));
+      left: (V.cardX[0] + V.cardW * 0.0666667) + "px",
+      top:  (V.cardY + V.cardH * 0.0388889) + "px",
+      font: fontCss(Math.round(V.meridiemFont), S.fSaver), color: ink
+    }, "AM"));
+
+    // the seam and its notches go on last, over the digits
+    for (i = 0; i < 2; i++) {
+      scr.appendChild(el("div", {
+        left: V.cardX[i] + "px", top: (V.cardY + (V.cardH - V.splitH) / 2) + "px",
+        width: V.cardW + "px", height: V.splitH + "px", background: "#000000"
+      }));
+      var notchY = V.cardY + (V.cardH - V.notchH) / 2;
+      [V.cardX[i] - V.notchW / 2, V.cardX[i] + V.cardW - V.notchW / 2].forEach(function (nx) {
+        scr.appendChild(el("div", {
+          left: nx + "px", top: notchY + "px",
+          width: V.notchW + "px", height: V.notchH + "px",
+          background: "#000000", borderRadius: (V.notchW / 2) + "px"
+        }));
+      });
+    }
   }
 
   // The volume and brightness overlays, drawn the way the build draws them:
