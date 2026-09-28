@@ -650,7 +650,33 @@
 
   /* Under Base's medium breakpoint the console is shown whole, so the stage
      goes back to being a column with the device centred in what is left. */
+  /* The sheet says what it is editing. Only the phone has one: on desktop the
+     rail is a column beside the device and the tabs above already name the
+     screen, so a second title there would only repeat them. */
+  .sheethead { display: none; }
+
   @media (max-width: 599.98px) {
+    .sheethead {
+      display: flex; align-items: center; justify-content: space-between;
+      flex: 0 0 auto; width: 100%; gap: var(--s400);
+      padding: 0 var(--s500) var(--s500);
+      background: none; border: 0; cursor: pointer; text-align: left;
+      color: var(--content);
+    }
+    .sheethead__title {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    }
+    /* The chevron points the way the sheet will move: up to open it, down to
+       put it away. The span is what rotates; an inline element ignores a
+       transform, so it has to be a block. */
+    .sheethead__chev {
+      flex: 0 0 auto; display: block; width: 20px; height: 20px;
+      color: var(--content-3);
+      transition: transform .22s cubic-bezier(.32, .72, 0, 1);
+    }
+    .sheethead__chev svg { display: block; width: 100%; height: 100%; }
+
     /* The rail is taken out of the grid below (position: fixed), so the stage
        becomes the first in-flow item. The landing rule sets the first column
        to 0px to collapse the rail, and a media query adds no specificity, so
@@ -718,6 +744,15 @@
 <main>
   <aside class="rail" id="rail">
     <button class="grabber" id="grabber" type="button" aria-label="Show or hide the controls"></button>
+    <button class="sheethead" id="sheethead" type="button" aria-expanded="false" aria-controls="railbody">
+      <span class="sheethead__title" id="sheettitle">General</span>
+      <span class="sheethead__chev" aria-hidden="true">
+        <svg viewBox="0 0 20 20" focusable="false">
+          <path d="M5 12.5 10 7.5l5 5" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+    </button>
     <div id="railbody"></div>
   </aside>
 
@@ -4057,6 +4092,7 @@
   function buildRail() {
     var rail = document.getElementById("railbody");
     rail.innerHTML = "";
+    paintSheetTitle();
     var groups = railMode === "general" ? GENERAL : (PAGE_GROUPS[page] || []);
     groups.forEach(function (g) {
       var d = el("details", null); d.className = "group"; if (g.open) d.open = true;
@@ -4309,6 +4345,22 @@
     return wrap;
   }
 
+  var SCREEN_TABS = [["carousel", "Carousel"], ["gamelist", "Gamelist"], ["menu", "Menu"],
+                     ["keyboard", "Keyboard"], ["saver", "Screensaver"], ["popup", "Pop-up"]];
+
+  // What the sheet is editing: the General tab, or the screen being previewed.
+  function sheetTitle() {
+    if (railMode === "general") return "General";
+    for (var i = 0; i < SCREEN_TABS.length; i++) {
+      if (SCREEN_TABS[i][0] === page) return SCREEN_TABS[i][1];
+    }
+    return "Controls";
+  }
+  function paintSheetTitle() {
+    var t = document.getElementById("sheettitle");
+    if (t) t.textContent = sheetTitle();
+  }
+
   function buildTabs() {
     var tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
@@ -4325,8 +4377,7 @@
     tab("General", railMode === "general", function () {
       railMode = "general"; buildTabs(); buildRail();
     });
-    [["carousel", "Carousel"], ["gamelist", "Gamelist"], ["menu", "Menu"],
-     ["keyboard", "Keyboard"], ["saver", "Screensaver"], ["popup", "Pop-up"]].forEach(function (t) {
+    SCREEN_TABS.forEach(function (t) {
       tab(t[1], railMode !== "general" && page === t[0], function () {
         page = t[0]; railMode = "screen"; buildTabs(); buildRail(); render();
       });
@@ -4856,8 +4907,21 @@
   // ---------- bottom sheet ----------
   var railEl = document.getElementById("rail");
   var grabber = document.getElementById("grabber");
-  function setSheet(open) { railEl.classList.toggle("open", open); }
+  var sheetHead = document.getElementById("sheethead");
+  var sheetChev = document.querySelector(".sheethead__chev");
+  function setSheet(open) {
+    railEl.classList.toggle("open", open);
+    if (sheetHead) sheetHead.setAttribute("aria-expanded", open ? "true" : "false");
+    // Turned here rather than by a selector on the open class, so the icon
+    // and the state the button reports come from one place.
+    if (sheetChev) sheetChev.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
+  }
   grabber.addEventListener("click", function () { setSheet(!railEl.classList.contains("open")); });
+  if (sheetHead) {
+    sheetHead.addEventListener("click", function () {
+      setSheet(!railEl.classList.contains("open"));
+    });
+  }
 
   var dragY = null;
   grabber.addEventListener("pointerdown", function (e) { dragY = e.clientY; grabber.setPointerCapture(e.pointerId); });
