@@ -651,6 +651,13 @@
   /* Under Base's medium breakpoint the console is shown whole, so the stage
      goes back to being a column with the device centred in what is left. */
   @media (max-width: 599.98px) {
+    /* The rail is taken out of the grid below (position: fixed), so the stage
+       becomes the first in-flow item. The landing rule sets the first column
+       to 0px to collapse the rail, and a media query adds no specificity, so
+       that rule still applies here and the stage inherits the zero-width
+       column - leaving nothing but its own padding. One column instead. */
+    body:not(.started) main { grid-template-columns: minmax(0, 1fr); }
+
     .stage {
       padding: 8px 8px calc(var(--peek) + 8px);
       min-height: 0; overflow: hidden; justify-content: flex-start;
